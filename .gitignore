@@ -8,3 +8,6 @@
 
 /.kotlin/
 __pycache__/
+
+# Instrucciones locales de herramientas de desarrollo
+/AGENTS.md

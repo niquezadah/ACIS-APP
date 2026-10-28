@@ -27,7 +27,7 @@ Revisión realizada entre el 27 y el 28 de octubre de 2026. Datos ficticios. Pru
 | Animaciones (10%) | Transiciones entre pantallas, progreso de la orden y aparición de indicadores y errores. |
 | Organización y persistencia (15%) | MVVM, repositorio sustituible, SQLite y fotografías privadas. |
 | Recursos nativos (15%) | Cámara y ubicación con solicitud de permiso. |
-| Colaboración (20%) | Pendiente por indicación del usuario: GitHub, Trello y evidencias reales del equipo. |
+| Colaboración (20%) | Repositorio publicado en GitHub. Pendientes: planificación en Trello y evidencias de participación de ambos integrantes. |
 
 Esta tabla muestra dónde está implementado cada punto; no garantiza una calificación. El alcance completo del caso ACIS incluye funciones futuras descritas en el README.
 
