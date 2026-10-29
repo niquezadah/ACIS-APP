@@ -16,7 +16,7 @@ class MainActivity: ComponentActivity() {
  override fun onCreate(savedInstanceState: Bundle?) {super.onCreate(savedInstanceState)
  val repo=(application as AcisApplication).repository
  setContent { AcisTheme { val vm:AcisViewModel=viewModel(factory=object:ViewModelProvider.Factory {
- @Suppress("UNCHECKED_CAST") override fun <T:ViewModel> create(modelClass:Class<T>):T = AcisViewModel(repo).also { model ->
+ @Suppress("UNCHECKED_CAST") override fun <T:ViewModel> create(modelClass:Class<T>):T = AcisViewModel(repo,(application as AcisApplication).evidenceStore).also { model ->
  (savedInstanceState?.getSerializable("draft") as? cl.acis.app.model.Order)?.let(model::edit)
  savedInstanceState?.getString("role")?.let(model::role)
  } as T
