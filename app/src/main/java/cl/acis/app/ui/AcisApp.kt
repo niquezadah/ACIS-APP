@@ -310,6 +310,6 @@ private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat
  Field("Nombre de quien confirma",o.customer,s.errors["customer"]) {vm.change(o.copy(customer=it))}
  Field("Observaciones (opcional)",o.feedback,multiline=true) {vm.change(o.copy(feedback=it))}
  Row(verticalAlignment=Alignment.CenterVertically) {Checkbox(checked=accepted,onCheckedChange={accepted=it});Text("Confirmo mi conformidad con el trabajo",Modifier.weight(1f))}
- Button(shape=ControlShape,onClick={vm.advance(o,Stage.CLOSED) {done()}},enabled=accepted&&!s.busy,modifier=Modifier.fillMaxWidth()) {Text("Confirmar y cerrar orden")}
+ Button(shape=ControlShape,onClick={vm.advance(o,Stage.CLOSED,customerAccepted=accepted) {done()}},enabled=accepted&&!s.busy,modifier=Modifier.fillMaxWidth()) {Text("Confirmar y cerrar orden")}
  }
 }
