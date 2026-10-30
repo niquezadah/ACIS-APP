@@ -13,7 +13,7 @@
 
 ## 1. Objetivo
 
-Verificar el funcionamiento de ACIS en un dispositivo Android físico, comprobando navegación, creación de órdenes, formularios, validaciones, cambios de estado, cámara, conformidad del cliente, cierre de órdenes y persistencia local.
+Verificar el funcionamiento de ACIS en un dispositivo Android físico, comprobando navegación, creación de órdenes, formularios, validaciones, cambios de estado, cámara, ubicación del dispositivo, animaciones funcionales, conformidad del cliente, cierre de órdenes y persistencia local.
 
 Las pruebas se documentan considerando el caso ACIS, la rúbrica de la Evaluación Parcial 2 y las instrucciones del profesor. Se distingue entre resultados comprobados, verificaciones pendientes y mejoras opcionales. Un resultado satisfactorio en una prueba no acredita por sí solo el cumplimiento completo de un criterio de la rúbrica.
 
@@ -42,10 +42,15 @@ Las pruebas se documentan considerando el caso ACIS, la rúbrica de la Evaluaci�
 | Registro de conformidad y cierre definitivo | Correcto |
 | Persistencia del estado Cerrada tras reabrir ACIS | Correcto |
 | Persistencia de diagnóstico, trabajo, foto y conformidad | Correcto |
-| Obtención y registro de ubicación GPS | Pendiente de prueba |
-| Verificación específica de animaciones | Pendiente de prueba |
+| Creación y aceptación de la OT 0002 | Correcto |
+| Registro de llegada de la OT 0002 | Correcto |
+| Obtención y visualización de ubicación del teléfono en la OT 0002 | Correcto |
+| Guardado de ubicación mediante «Guardar avance» | Correcto |
+| Persistencia de ubicación tras cerrar y reabrir ACIS | Correcto |
+| Animación de carga al obtener ubicación | Correcto, observada en el teléfono |
+| Barra de progreso según el estado de la OT | Correcto — animación verificada visualmente por quien realizó la prueba en Motorola |
 
-**Resultado general:** se completó satisfactoriamente un recorrido de prueba de la OT 0001, desde su creación hasta su cierre. No se han verificado todos los escenarios ni todos los criterios evaluados.
+**Resultado general:** se completó satisfactoriamente el recorrido de la OT 0001 desde su creación hasta su cierre. En la OT 0002 se comprobaron la creación, aceptación, llegada, ubicación del dispositivo y persistencia del dato, además de la animación de carga del GPS. El responsable también confirmó haber observado la animación de la barra de progreso de las órdenes. No se han verificado todos los escenarios ni todos los criterios evaluados.
 
 ## 3. Validaciones comprobadas
 
@@ -73,7 +78,7 @@ Al intentar finalizar una intervención sin completar los datos requeridos, se m
 
 Se completaron el diagnóstico y el trabajo realizado y se capturó una fotografía. El campo Materiales permaneció opcional.
 
-La ubicación no fue registrada durante esta prueba; debe evaluarse por separado como segundo recurso nativo.
+La ubicación no fue registrada durante esta primera prueba de la OT 0001. Su obtención y conservación se comprobaron posteriormente en la OT 0002, según el apartado 4.5.
 
 ### 3.3. Validación de conformidad del cliente
 
@@ -158,6 +163,32 @@ Al abrir nuevamente la OT 0001, se observó que seguían guardados:
 
 **Conclusión:** la prueba demuestra persistencia local de los datos examinados en el Motorola. No sustituye una revisión completa de toda la arquitectura ni de todos los casos de almacenamiento.
 
+### 4.5. OT 0002 — Ubicación del dispositivo y persistencia
+
+**Fecha:** 29/10/2026  
+**Dispositivo:** Motorola moto g55 5G  
+**Perfil:** Jefatura para crear la OT y Técnico para registrar la visita  
+**Orden:** OT 0002, Sucursal ACIS de Prueba  
+**Resultado:** satisfactorio para el escenario probado.
+
+Se creó la OT 0002 con datos ficticios de un mantenimiento preventivo de la cámara frigorífica CF-001. Se aceptó la orden y se registró la llegada el **29/10/2026 a las 20:56**, quedando en estado **En atención**.
+
+Desde **Registrar intervención**, se utilizó **Registrar ubicación actual**. ACIS mostró un resultado de ubicación del dispositivo y una precisión indicada de aproximadamente **±182 metros**. No se incluyen las coordenadas reales en este documento por privacidad.
+
+Luego se presionó **Guardar avance**, se comprobó el mensaje **«Guardado en este teléfono»** y se observó **«Ubicación registrada»** en el detalle de la orden. Posteriormente se cerró y reabrió la aplicación, y la ubicación seguía registrada en la OT 0002.
+
+**Resultado:** se comprobó la obtención, visualización, guardado y persistencia de la ubicación en esta orden. La exactitud espacial fue limitada; no se ha evaluado la ubicación con permisos denegados ni en otros entornos.
+
+**Estado final de la OT 0002 al terminar esta prueba:** En atención, sin registrar salida. Se conserva para continuar las pruebas o la demostración.
+
+### 4.6. Animaciones funcionales
+
+En el formulario **Registrar intervención**, al presionar **Registrar ubicación actual**, se observó una **barra de carga animada** mientras ACIS consultaba la ubicación. El usuario confirmó visualmente su aparición en el Motorola.
+
+En el detalle de la OT 0002 se observó una barra horizontal de progreso correspondiente al estado **En atención**. El código utiliza `animateFloatAsState` para cambiar su valor cuando cambia la etapa. **El responsable de la prueba confirmó que observó visualmente el movimiento de esta barra durante el uso de ACIS en el Motorola.**
+
+**Resultado:** se verificaron visualmente en el teléfono tanto la animación de carga de ubicación como la animación de la barra de progreso de las órdenes. Esta observación se sustenta en la prueba del responsable; no se adjuntó una grabación específica de la transición.
+
 ## 5. Observaciones y mejoras pendientes
 
 **No todas las observaciones son requisitos obligatorios.** Se clasifican según su relación con la rúbrica, el funcionamiento del proyecto y los acuerdos del equipo.
@@ -187,17 +218,16 @@ Una mejora no es obligatoria por el solo hecho de haber sido detectada. A la vez
 
 ## 6. Pruebas pendientes
 
-- Obtener y mostrar la ubicación mediante GPS en el Motorola.
 - Comprobar los permisos y el comportamiento de la ubicación cuando se deniega el acceso.
-- Verificar la conservación de la ubicación, si se registra.
 - Revisar la orientación de las fotos en distintas capturas.
 - Revisar el comportamiento del teclado al completar formularios.
-- Verificar animaciones funcionales y retroalimentación visual (IE 2.2.2).
+- Si el profesor lo solicita, preparar una grabación que muestre explícitamente la transición de la barra de progreso, ya observada por el responsable de las pruebas.
 - Comprobar la adaptabilidad y navegación en distintas condiciones de uso.
-- Revisar la evidencia de Trello y la distribución de tareas.
-- Comprobar los requisitos de entrega y el README antes de la presentación.
+- Revisar la evidencia de Trello y la distribución de tareas de ambos integrantes.
+- Comprobar requisitos de entrega, README y estado de la rama compartida antes de presentar.
+- Revisar y entregar el video explicativo de **3 minutos y 33 segundos**, ya preparado **sin voz, con subtítulos en español** y sin mostrar coordenadas reales.
 
-El flujo principal de la OT 0001 **ya fue completado y verificado**; no debe volver a figurar como pendiente.
+El flujo completo de la OT 0001 **ya fue verificado**. La ubicación y la animación de carga de la OT 0002 **también fueron verificadas** y no deben seguir figurando como pendientes.
 
 ## 7. Relación con la rúbrica de Evaluación Parcial 2
 
@@ -206,10 +236,10 @@ El flujo principal de la OT 0001 **ya fue completado y verificado**; no debe vol
 | IE 2.1.1 — Diseño y navegación | 15 % | Navegación funcional en las pantallas probadas; adaptabilidad y teclado por revisar. |
 | IE 2.1.2 — Formularios validados | 15 % | Mensajes, bordes e íconos comprobados en creación, intervención y conformidad. |
 | IE 2.2.1 — Validaciones desde la lógica | 10 % | Reglas centralizadas implementadas; comportamiento observado en las pruebas. |
-| IE 2.2.2 — Animaciones funcionales | 10 % | Pendiente de verificación específica. |
-| IE 2.3.1 — MVVM y persistencia local | 15 % | Arquitectura presente; persistencia funcional de la OT cerrada y sus datos comprobada. |
+| IE 2.2.2 — Animaciones funcionales | 10 % | Animación de carga del GPS y movimiento de la barra de progreso verificados visualmente por el responsable de las pruebas en Motorola. |
+| IE 2.3.1 — MVVM y persistencia local | 15 % | Arquitectura presente; persistencia de OT cerrada y de ubicación de la OT 0002 comprobadas. |
 | IE 2.3.2 — GitHub y Trello | 20 % | Commits en rama propia; evidencia de Trello pendiente de revisar. |
-| IE 2.4.1 — Dos recursos nativos | 15 % | Cámara probada; GPS pendiente de verificar. |
+| IE 2.4.1 — Dos recursos nativos | 15 % | Cámara y ubicación del dispositivo probadas funcionalmente; escenarios de permisos no probados. |
 
 Los resultados constituyen **evidencia parcial de pruebas**, no una nota ni una acreditación automática de todos los indicadores.
 
@@ -228,16 +258,20 @@ Contribución técnica en `Order.kt`, `AcisViewModel.kt` y `AcisApp.kt` para la 
 
 Creación de `verification/PRUEBAS_MANUALES_CLAUDIO.md` y primer registro de pruebas.
 
+**`5def4fb`** — `test: verificar conformidad cierre y persistencia de OT 0001`
+
+Actualización del documento con la prueba de cierre. Este es el commit ya subido a `claudio/validacion-cierre`; la presente actualización con GPS y animaciones requiere un nuevo commit antes de publicarse en GitHub.
+
 La participación de ambos integrantes y la planificación real en Trello deben verificarse también. Este archivo no sustituye los registros de GitHub o Trello.
 
 ## 9. Estado general de verificación
 
-**Resultado:** satisfactorio para el flujo principal probado de la OT 0001.
+**Resultado:** satisfactorio para el flujo principal de la OT 0001 y para el recurso de ubicación del dispositivo probado con la OT 0002.
 
-Se comprobaron la creación y aceptación de la orden; el registro de llegada; las validaciones de intervención; la captura y conservación de una fotografía; el registro de salida; la conformidad del cliente; el cierre definitivo; y la persistencia local después de reabrir ACIS.
+Se comprobaron la creación y aceptación de órdenes; registro de llegada; validaciones de intervención; cámara y fotografía; registro de salida; conformidad del cliente; cierre definitivo y persistencia local después de reabrir ACIS. La OT 0002 permitió comprobar obtención, guardado y conservación de ubicación, además de la animación de carga correspondiente. El responsable confirmó visualmente el movimiento de la barra de progreso de las órdenes.
 
-El recurso nativo de **GPS**, las **animaciones**, ciertos aspectos de **usabilidad** y la evidencia de **Trello** siguen pendientes de comprobación. También queda pendiente preparar la demostración en video y revisar la entrega formal.
+Quedan pendientes la revisión de determinados aspectos de **usabilidad**, escenarios de **permisos**, la evidencia de **Trello** y la revisión de entrega. La animación de la barra de progreso ya fue observada por el responsable; una grabación de esa transición puede añadirse como evidencia adicional si se requiere. Se preparó y aprobó un video de demostración de **3 minutos y 33 segundos**, **sin voz y con subtítulos en español**, evitando exponer coordenadas reales.
 
 Las mejoras opcionales se evaluarán según la rúbrica, el caso ACIS y los acuerdos del equipo, evitando modificaciones innecesarias.
 
-**Conclusión:** ACIS presenta un recorrido principal funcional comprobado en un Motorola moto g55. Aún no corresponde declarar el cumplimiento íntegro de la Evaluación Parcial 2 hasta completar las verificaciones pendientes.
+**Conclusión:** ACIS presenta su recorrido principal y los dos recursos nativos probados en un Motorola moto g55. Estas pruebas aportan evidencia favorable, pero no equivalen a una calificación ni permiten afirmar el cumplimiento íntegro de todos los criterios de la Evaluación Parcial 2.
