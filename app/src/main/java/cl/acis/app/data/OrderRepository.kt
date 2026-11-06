@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.json.JSONArray
 
-interface OrderRepository { suspend fun all(): List<Order>; suspend fun save(order: Order): Long }
+interface OrderRepository { suspend fun all(): List<Order>; suspend fun save(order: Order): Long; suspend fun delete(id: Long) }
 // El repositorio permite reemplazar el almacenamiento sin cambiar las pantallas.
 class LocalOrderRepository(context: Context, databaseName: String = "acis.db"): SQLiteOpenHelper(context,databaseName,null,1), OrderRepository {
  override fun onCreate(db: SQLiteDatabase) { db.execSQL("CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, payload TEXT NOT NULL)") }
@@ -23,6 +23,9 @@ class LocalOrderRepository(context: Context, databaseName: String = "acis.db"): 
  private fun readPhotos(json: JSONObject): List<String> {
   val array=json.optJSONArray("photos") ?: return listOf(json.optString("photo")).filter {it.isNotBlank()}
   return (0 until array.length()).map { array.getString(it) }.filter {it.isNotBlank()}
+ }
+ override suspend fun delete(id: Long) = withContext(Dispatchers.IO) {
+  check(writableDatabase.delete("orders","id=?",arrayOf(id.toString()))==1) {"Orden no disponible"}
  }
  override suspend fun save(order: Order): Long = withContext(Dispatchers.IO) {
   require(Rules.photoLimit(order).isEmpty()) { "Máximo 10 fotografías" }

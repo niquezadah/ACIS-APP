@@ -20,6 +20,19 @@ import org.junit.runner.RunWith
 class EvidencePersistenceTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
+    @Test fun deletedOrderStaysDeletedAfterReopeningDatabase() = runBlocking {
+        val name="test_${UUID.randomUUID()}.db"
+        var repo=LocalOrderRepository(context,name)
+        try {
+            val first=repo.save(Order(site="Primera"))
+            val second=repo.save(Order(site="Segunda"))
+            repo.delete(first)
+            repo.close()
+            repo=LocalOrderRepository(context,name)
+            assertEquals(listOf(second),repo.all().map {it.id})
+        } finally {repo.close();context.deleteDatabase(name)}
+    }
+
     @Test fun tenPhotosSurviveReopeningAndCanBeRemoved() = runBlocking {
         val name = "test_${UUID.randomUUID()}.db"
         var repo = LocalOrderRepository(context, name)

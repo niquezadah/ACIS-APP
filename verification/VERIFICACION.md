@@ -85,3 +85,28 @@ Se agregaron los iconos de cámara, galería, pin y copiar; cámara y galería u
 El listado ordena las órdenes abiertas por Urgente, Alta y Normal. Las cerradas quedan al final; a igualdad de prioridad se muestra primero la orden más nueva.
 
 Validación: compilación y lint sin errores; 14 pruebas unitarias aprobadas, incluidas cuatro para ordenamiento y formato de coordenadas. En emulador se revisaron los iconos y se copió una ubicación simulada desde intervención y detalle; al pegar en un campo se verificó el texto exacto sin la precisión GPS. La revisión en teléfono físico queda pendiente.
+
+
+## Línea de tiempo y guardado al retroceder
+
+La barra de progreso del detalle se reemplaza por cinco pasos con iconos. Se distinguen los estados alcanzados, el actual y los pendientes. Terminado representa el estado Cerrada tras la conformidad del cliente; no se cambian los estados almacenados de órdenes anteriores.
+
+Al retroceder desde la intervención con Volver o Atrás se guarda el borrador antes de navegar. Se permiten campos incompletos y no se registra salida ni se finaliza la orden. Si hay una importación de fotos en curso, se espera su término antes de guardar. Si falla el almacenamiento, se conserva el formulario y se informa el error. Esto no representa guardado al cerrar forzosamente la aplicación.
+
+Compilación y lint sin errores. Pasan las 14 pruebas unitarias y 11 pruebas en Android. Las tres nuevas pruebas verifican guardado de visita incompleta, permanencia en el formulario cuando falla el guardado y regreso sin escritura adicional cuando no hay cambios.
+
+Recorrido en emulador: se ingresó texto sin usar Guardar avance y se salió primero con Volver y luego con Atrás de Android. Ambos cambios se conservaron; se reinició la app y se recuperó el texto. La línea de tiempo se revisó visualmente en En atención. Captura en revision_2026-11-05.
+
+
+## Identidad visual y eliminación de órdenes — 6 de noviembre de 2026
+
+Se integra el logo proporcionado en la cabecera azul y en un icono adaptable de Android. El nombre de la aplicación pasa a ACIS en Terreno. La cabecera muestra SERVICIO EN TERRENO y el regreso utiliza el icono undo. Se retira el eslogan del listado.
+
+Jefatura puede eliminar una orden desde el detalle después de una confirmación. El ViewModel también comprueba el perfil. Se conserva la orden si falla el borrado. Después de eliminar se retira del listado y se intenta limpiar su evidencia privada no compartida por otras órdenes.
+
+Pasaron las 14 pruebas unitarias y 15 pruebas en Android. Las cuatro nuevas verifican rechazo de eliminación desde Técnico y Cliente, eliminación de la orden seleccionada, conservación en caso de error y persistencia del borrado al reabrir la base. Se probó en pantalla cancelar el diálogo y luego confirmar la eliminación de una orden ficticia, conservando la otra. Se comprobó en el APK el nombre ACIS en Terreno. Revisión física pendiente.
+
+
+## Logo transparente y separación del listado
+
+Se reemplaza la imagen usada en cabecera e icono adaptable por una versión PNG con transparencia exterior, conservando el distintivo azul. El listado incorpora 20 dp de margen superior antes del título. Verificación: assembleDebug y lintDebug completados sin errores; canal alfa comprobado y aspecto revisado en emulador.

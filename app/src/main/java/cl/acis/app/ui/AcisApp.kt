@@ -36,6 +36,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -71,9 +72,22 @@ private val ControlShape=RoundedCornerShape(6.dp)
  val entry by nav.currentBackStackEntryAsState()
  val route=entry?.destination?.route ?: "orders"
  val keyboardVisible=WindowInsets.ime.getBottom(LocalDensity.current)>0
+ fun goBack() {
+  val visitId=if(route=="visit/{id}") entry?.arguments?.getString("id")?.toLongOrNull() else null
+  if(visitId!=null) vm.saveVisitBeforeLeaving(visitId) {nav.popBackStack()} else nav.popBackStack()
+ }
  val snackbar=remember { SnackbarHostState() }
  LaunchedEffect(s.message) { s.message?.let { snackbar.showSnackbar(it);vm.notify(null) } }
- Scaffold(topBar={ TopAppBar(title={Column { Text("ACIS",fontWeight=FontWeight.Bold);Text("SERVICIOS EN TERRENO",style=MaterialTheme.typography.labelSmall) }},navigationIcon={if(route!="orders") TextButton(shape=ControlShape,onClick={nav.popBackStack()}) { Text("‹ Volver") }},colors=TopAppBarDefaults.topAppBarColors(containerColor=Color.White)) },snackbarHost={SnackbarHost(snackbar)},containerColor=MaterialTheme.colorScheme.background) { padding ->
+ Scaffold(topBar={ TopAppBar(
+ title={ Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+  Image(androidx.compose.ui.res.painterResource(R.drawable.acis_logo_clean),contentDescription="Logo ACIS",modifier=Modifier.size(42.dp).clip(RoundedCornerShape(8.dp)))
+  Column {Text("ACIS",fontWeight=FontWeight.Bold);Text("SERVICIO EN TERRENO",style=MaterialTheme.typography.labelSmall)}
+ }},
+ navigationIcon={if(route!="orders") IconButton(onClick={goBack()}) {
+  Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_undo),contentDescription="Volver",modifier=Modifier.size(24.dp))
+ }},
+ colors=TopAppBarDefaults.topAppBarColors(containerColor=Blue,titleContentColor=Color.White,navigationIconContentColor=Color.White)
+ ) },snackbarHost={SnackbarHost(snackbar)},containerColor=MaterialTheme.colorScheme.background) { padding ->
  Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),contentAlignment=Alignment.TopCenter) {
  Column(Modifier.widthIn(max=840.dp).fillMaxWidth()) {
  if(s.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -91,14 +105,14 @@ private val ControlShape=RoundedCornerShape(6.dp)
  composable("detail/{id}") { back ->
  val current by vm.state.collectAsStateWithLifecycle()
  val order=current.orders.find { it.id==back.arguments?.getString("id")?.toLongOrNull() }
- if(order!=null) OrderDetail(order,current,vm) { target -> vm.edit(order);nav.navigate(target+"/"+order.id) }
+ if(order!=null) OrderDetail(order,current,vm,onDeleted={nav.popBackStack("orders",false)}) { target -> vm.edit(order);nav.navigate(target+"/"+order.id) }
  else Text("Orden no disponible",Modifier.padding(24.dp))
  }
  composable("visit/{id}") { val current by vm.state.collectAsStateWithLifecycle(); VisitForm(current,vm) { nav.popBackStack() } }
  composable("confirm/{id}") { val current by vm.state.collectAsStateWithLifecycle(); Confirmation(current,vm) { nav.popBackStack() } }
  }
  // Registrado después de NavHost para unificar el retroceso de Android y Volver.
- BackHandler(enabled=route!="orders" && !keyboardVisible) {nav.popBackStack()}
+ BackHandler(enabled=route!="orders" && !keyboardVisible) {goBack()}
  }
  }
  }
@@ -168,9 +182,8 @@ private val ControlShape=RoundedCornerShape(6.dp)
  var query by rememberSaveable { mutableStateOf("") }
  var filter by rememberSaveable { mutableStateOf("Todas") }
  val visible=ordersByPriority(s.orders).filter { (filter=="Todas" || if(filter=="Cerradas") it.stage==Stage.CLOSED else it.stage!=Stage.CLOSED) && (it.site+it.equipment+it.technician+it.id).contains(query,true) }
- LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=28.dp)) {
+ LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(top=20.dp,bottom=28.dp)) {
  item { Text("Órdenes de trabajo",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold) }
- item { Text("Cada visita, en un solo lugar.",color=MaterialTheme.colorScheme.onSurfaceVariant) }
  item { Surface(color=Sky,shape=RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
  Text("Demostración local",fontWeight=FontWeight.SemiBold);Text("Elige un perfil para recorrer el trabajo. Los datos se guardan en este teléfono.",style=MaterialTheme.typography.bodySmall)
  Choice("Ver como",listOf("Técnico","Jefatura","Cliente"),s.role,vm::role)
@@ -196,10 +209,19 @@ private val ControlShape=RoundedCornerShape(6.dp)
  }
 }
 private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat("dd/MM/yyyy · HH:mm",Locale.forLanguageTag("es-CL")).format(Date(value))
-@Composable private fun OrderDetail(o:Order,s:UiState,vm:AcisViewModel,open:(String)->Unit) {
- val progress by animateFloatAsState((o.stage.ordinal+1)/5f,label="avance")
+@Composable private fun OrderDetail(o:Order,s:UiState,vm:AcisViewModel,onDeleted:()->Unit,open:(String)->Unit) {
+ var confirmDelete by rememberSaveable(o.id) {mutableStateOf(false)}
+ if(confirmDelete && s.role=="Jefatura") AlertDialog(
+  containerColor=Color.White,shape=RoundedCornerShape(12.dp),
+  onDismissRequest={if(!s.busy) confirmDelete=false},
+  icon={Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_delete_order),null,modifier=Modifier.size(28.dp),tint=Color(0xFF9B3038))},
+  title={Text("¿Eliminar esta orden?")},
+  text={Text("OT ${o.id} · ${o.site}\nSe eliminarán el registro local y sus fotografías. Esta acción no se puede deshacer.")},
+  confirmButton={TextButton(enabled=!s.busy,onClick={vm.deleteOrder(o.id,onDeleted)}) {Text("Eliminar orden",color=Color(0xFF9B3038))}},
+  dismissButton={TextButton(enabled=!s.busy,onClick={confirmDelete=false}) {Text("Cancelar")}}
+ )
  Page("OT ${o.id.toString().padStart(4,'0')}",o.site) {
- Badge(o.stage.label);LinearProgressIndicator(progress={progress},modifier=Modifier.fillMaxWidth())
+ OrderTimeline(o.stage)
  Info("Equipo",o.equipment);Info("Dirección",o.address);Info("Asignación","${o.technician} · ${o.priority} · ${o.type}");Info("Motivo",o.problem)
  HorizontalDivider()
  Info("Llegada",time(o.arrival));Info("Salida",time(o.departure))
@@ -215,6 +237,9 @@ private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat
  Stage.ACCEPTED -> Button(shape=ControlShape,onClick={vm.advance(o,Stage.ACTIVE)},enabled=!s.busy,modifier=Modifier.fillMaxWidth()) {Text("Registrar llegada e iniciar")}
  Stage.ACTIVE -> Button(shape=ControlShape,onClick={open("visit")},modifier=Modifier.fillMaxWidth()) {Text("Registrar intervención")}
  else -> Unit
+ }
+ if(s.role=="Jefatura") Button(shape=ControlShape,enabled=!s.busy,onClick={confirmDelete=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFFBE3E2),contentColor=Color(0xFF9B3038))) {
+  ActionIcon(R.drawable.ic_delete_order);Text("Eliminar orden")
  }
  if(s.role=="Cliente" && o.stage==Stage.DONE) Button(shape=ControlShape,onClick={open("confirm")},modifier=Modifier.fillMaxWidth()) {Text("Revisar y confirmar trabajo")}
  }

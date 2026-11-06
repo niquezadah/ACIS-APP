@@ -1,4 +1,4 @@
-# ACIS · Órdenes de trabajo en terreno
+# ACIS en Terreno
 
 Proyecto de Desarrollo de Aplicaciones Móviles (DSY1105).
 
@@ -12,9 +12,10 @@ Nuestra aplicación permite organizar y registrar visitas de mantención de equi
 ## Funcionalidades
 
 - Creación de órdenes con local, dirección, equipo, técnico asignado, prioridad, tipo de mantención y motivo.
+- Eliminación de órdenes desde Jefatura, con confirmación previa.
 - Búsqueda de órdenes por local, equipo, técnico o número; filtros de pendientes y cerradas. Las abiertas se ordenan por prioridad (Urgente, Alta y Normal) y las cerradas quedan al final. A igual prioridad aparecen primero las más nuevas.
 - Aceptación de órdenes y registro de llegada y salida.
-- Registro de diagnóstico, trabajo realizado y materiales utilizados.
+- Registro de diagnóstico, trabajo realizado y materiales utilizados, con guardado automático al retroceder desde la intervención.
 - Hasta 10 fotografías por orden, tomadas con la cámara o elegidas desde el teléfono.
 - Registro de ubicación actual, con permiso del dispositivo, y copia de coordenadas para pegarlas en Google Maps desde cualquier perfil.
 - Confirmación del trabajo por parte del cliente.
@@ -22,6 +23,8 @@ Nuestra aplicación permite organizar y registrar visitas de mantención de equi
 - Validaciones con mensajes e íconos, indicadores de carga y animaciones de navegación y progreso.
 
 Las fotografías comparten una altura fija para alinear la galería sin recortar las imágenes. El botón **Eliminar** usa un fondo rojo suave y un icono de basurero. En el listado, el texto de prioridad usa azul, naranja o rojo según su nivel.
+
+La cabecera azul muestra el logo sin fondo claro exterior, ACIS y SERVICIO EN TERRENO. El título del listado tiene una separación superior de 20 dp. El acceso directo de Android se identifica como ACIS en Terreno y utiliza el mismo logo mediante un icono adaptable. El botón de regreso utiliza el icono de deshacer.
 
 La interfaz utiliza Material 3, con colores azul, celeste y blanco, contenido desplazable y ancho limitado en pantallas grandes.
 
@@ -32,11 +35,13 @@ Los botones y campos de texto tienen esquinas de 6 dp. Cámara, galería y ubica
 1. Seleccionar **Jefatura** y crear una orden con los datos de la visita.
 2. Seleccionar **Técnico**, abrir la orden, aceptarla y registrar la llegada.
 3. Ingresar el diagnóstico y el trabajo realizado. Los materiales son opcionales.
-4. Agregar entre 1 y 10 fotografías desde la cámara o con **Elegir del teléfono**. Se pueden revisar deslizando hacia los lados y quitar antes de guardar. Si está disponible, registrar la ubicación. Se puede guardar un avance y continuar después.
+4. Agregar entre 1 y 10 fotografías desde la cámara o con **Elegir del teléfono**. Se pueden revisar deslizando hacia los lados y quitar antes de guardar. Si está disponible, registrar la ubicación. Se puede guardar un avance y continuar después. Al salir de la intervención con Volver o Atrás, el avance se guarda automáticamente antes de regresar; si falla, el formulario permanece abierto.
 5. Finalizar la visita para registrar la salida y dejar el trabajo pendiente de confirmación.
 6. Seleccionar **Cliente**, revisar el trabajo, ingresar el nombre de quien confirma y marcar la conformidad para cerrar la orden.
 
 En esta versión, los perfiles se seleccionan desde la pantalla principal para demostrar los tres recorridos. No hay cuentas ni contraseñas y los perfiles comparten los datos del mismo teléfono.
+
+La pantalla de detalle muestra una línea de tiempo con iconos para Asignada, Aceptada, En atención, Por confirmar y Terminado. El último paso corresponde a una orden Cerrada después de la conformidad del cliente; el guardado automático no cambia el estado ni registra salida. Solo guarda al retroceder desde la intervención, no al cerrar forzosamente la aplicación.
 
 ## Estados y validaciones
 
@@ -115,3 +120,7 @@ Estas funcionalidades quedan pendientes para la evolución del proyecto. Guardar
 - Guías 1–13 de DSY1105, caso ACIS y pauta de Evaluación Parcial 2.
 - Ejemplos de clases: [layoutsKotlin2026](https://github.com/profealejandroduoc/layoutsKotlin2026) y [sintaxis_kotlin_2026](https://github.com/profealejandroduoc/sintaxis_kotlin_2026).
 - Documentación de Android: [arquitectura](https://developer.android.com/topic/architecture/recommendations), [Jetpack Compose](https://developer.android.com/compose), [Activity Result](https://developer.android.com/training/basics/intents/result) y [permisos](https://developer.android.com/training/permissions/requesting).
+
+## Eliminar una orden
+
+Desde Jefatura, abrir el detalle y tocar Eliminar orden. Se solicita confirmación antes de borrar. Cancelar conserva el registro. Al confirmar se elimina la orden local y se intenta retirar sus copias privadas de fotografías que no estén referenciadas por otras órdenes; las imágenes originales elegidas desde la galería no se modifican. La eliminación es permanente en este dispositivo. La validación del perfil también se realiza en el ViewModel; los perfiles siguen siendo de demostración.

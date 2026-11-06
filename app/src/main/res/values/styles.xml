@@ -1,7 +1,7 @@
 <resources>
     <style name="Theme.Acis" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">#FFFFFF</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#125B9A</item>
         <item name="android:navigationBarColor">#123A58</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
