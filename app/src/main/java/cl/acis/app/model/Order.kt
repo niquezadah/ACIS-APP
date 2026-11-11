@@ -28,7 +28,8 @@ data class Order(
  val departure: Long = 0,
  val customer: String = "",
  val feedback: String = "",
- val photos: List<String> = emptyList()
+ val photos: List<String> = emptyList(),
+ val customerConfirmed: Boolean = false
 ) : java.io.Serializable {
  val evidencePhotos: List<String>
   get() = if (photos.isNotEmpty()) photos

@@ -1,4 +1,52 @@
-# Revisión de la primera versión
+# Verificación de ACIS
+
+## Protocolo de protección de datos
+
+Vigente desde el 11 de noviembre de 2026. Rige las verificaciones futuras; las secciones posteriores conservan los resultados históricos y sus dispositivos de origen.
+
+Las pruebas instrumentadas pueden instalar y desinstalar los paquetes de aplicación y de pruebas. Deben ejecutarse en un entorno de pruebas desechable con datos ficticios. Una prueba aprobada sobre una base temporal no acredita conservación de los datos de una instalación existente.
+
+### Comprobaciones según el alcance autorizado
+
+| Comprobación | Entorno y condición |
+| --- | --- |
+| Documentación y configuración de instrucciones | Lectura, revisión de diff y Git, validación de sintaxis en memoria. |
+| Compilación, lint y pruebas unitarias | PC. Seleccionar tareas explícitas como `:app:assembleDebug`, `:app:lintDebug` y `:app:testDebugUnitTest`. |
+| Recorrido manual y recursos nativos físicos | Dispositivo físico con la aplicación ya instalada y órdenes ficticias identificadas. Conservar los registros existentes. |
+| Pruebas instrumentadas de SQLite, ViewModel o UI | Exclusivamente un entorno desechable identificado y autorizado, con bases de prueba independientes y datos ficticios. |
+
+### Preparación de pruebas instrumentadas
+
+1. Documentar el entorno de pruebas desechable y su identificador antes de autorizar su preparación y ejecución. Puede ser un emulador dedicado o un dispositivo de pruebas sin datos importantes.
+2. Desconectar los dispositivos con datos importantes antes de ejecutar instrumentadas. Confirmar el destino en Android Studio o en el ejecutor empleado. El uso de una base temporal dentro de una prueba no aísla el ciclo de instalación del paquete.
+3. Las tareas `connectedAndroidTest`, `connectedDebugAndroidTest`, sus variantes y la ejecución instrumentada desde Android Studio pueden instalar y desinstalar la aplicación y su APK de pruebas. Su ejecución en dispositivos con datos importantes está prohibida.
+4. Ante fallos de firma, instalación o lectura, detener la operación y registrar el error. No usar desinstalación, `adb uninstall`, `pm clear`, restablecimiento de datos ni cambios de `applicationId` como reparación automática. Toda actuación sobre la instalación o los datos del teléfono requiere autorización específica y revisión previa de su efecto.
+5. Una instalación con `-r` no acredita conservación si el paquete anterior ya fue eliminado. Separar la evidencia de persistencia de bases de prueba de la conservación de una instalación real.
+
+### Recorrido manual en un dispositivo físico
+
+Comprobar primero desde la interfaz instalada qué órdenes existen y cuál es la orden ficticia del recorrido. Registrar el alcance autorizado y conservar los datos anteriores. Si faltan órdenes o hay un error de lectura, detener el recorrido y solicitar un diagnóstico de solo lectura. Antes de cualquier actuación sobre la instalación o el almacenamiento, definir una protección o copia recuperable de los datos y obtener autorización específica.
+
+Informar expresamente toda prueba pendiente. Las revisiones documentales se verifican mediante lecturas y no autorizan pruebas, instalaciones, operaciones ADB ni preparación de dispositivos. Mantener activas las solicitudes de autorización para cambios de archivos y las confirmaciones del entorno.
+
+## Lectura de órdenes y verificaciones locales — 11 de noviembre de 2026
+
+El código separa la conformidad del Cliente de la aprobación final de Jefatura. La conformidad deja la orden Por confirmar; Jefatura puede cerrarla cuando la conformidad está guardada.
+
+La lectura de SQLite interpreta cada fila de forma independiente, conserva los registros originales e informa los IDs ilegibles. El estado de la interfaz distingue una base vacía de una lectura parcial o fallida y mantiene un aviso con reintento. Si falla una lectura, se conserva la última lista cargada. La versión SQLite continúa en 1 y se admite la ausencia de `customerConfirmed` en registros antiguos.
+
+La ejecución local registrada para esta revisión terminó con los siguientes resultados.
+
+- `:app:testDebugUnitTest` aprobó 27 pruebas, sin fallos ni errores. Incluye 8 pruebas de lectura de JSON, 5 de estado de lectura y las 14 pruebas anteriores de reglas y presentación.
+- `:app:assembleDebug` terminó correctamente.
+- `:app:lintDebug` terminó sin errores, con 48 advertencias. Una advertencia informa de una versión posterior de la dependencia JSON utilizada exclusivamente para pruebas locales.
+- La cobertura nueva comprueba filas inválidas, estados desconocidos, registros antiguos y conservación de referencias a fotografías, ubicación, horarios y la marca de conformidad.
+
+Quedan pendientes la comprobación de integración con SQLite y la revisión visual de los nuevos avisos en un entorno de pruebas autorizado. Estas pruebas locales no acceden a los datos de un dispositivo físico.
+
+La revisión aporta evidencia para IE 2.2.1, reglas y estado reactivo, e IE 2.3.1, arquitectura y persistencia local, según el resumen de rúbrica disponible. El cumplimiento completo requiere contrastar la pauta oficial y completar la verificación funcional pendiente.
+
+## Revisión de la primera versión
 
 Revisión realizada entre el 27 y el 28 de octubre de 2026. Datos ficticios. Pruebas en emulador Android; aún no se ha probado en un teléfono físico.
 
@@ -33,9 +81,9 @@ Esta tabla muestra dónde está implementado cada punto; no garantiza una califi
 
 ## Repetir la revisión
 
-Abrir el proyecto en Android Studio y seguir el recorrido del README. `smoke.py` es un apoyo para crear una orden de prueba y recorrer el guardado de avance con ADB; agrega datos ficticios y espera un emulador `emulator-5554`. La revisión de cámara, ubicación y cierre se hizo por separado. Las capturas en esta carpeta muestran los estados revisados.
+Para futuras revisiones, aplicar primero el protocolo de protección anterior. `smoke.py` y `device.py` son apoyos históricos que escriben datos y manejan la interfaz mediante ADB en `emulator-5554`. Su ejecución requiere autorización y confirmación de un entorno desechable. La revisión histórica de cámara, ubicación y cierre se hizo por separado. Las capturas de esta carpeta corresponden a esos recorridos.
 
-Antes de entregar, probar también en el teléfono que se usará en la defensa: cámara disponible, permisos denegados, ubicación desactivada y legibilidad con tamaño de letra aumentado. No se declara que esos casos hayan sido comprobados en un dispositivo físico.
+Antes de entregar, planificar un recorrido manual autorizado en el teléfono de la defensa con la aplicación instalada, cámara, permisos denegados, ubicación desactivada y letra aumentada. Registrar qué escenarios se verificaron y cuáles siguen pendientes.
 
 ## Revisión de fotos e interfaz — 29 de octubre de 2026
 
@@ -54,7 +102,7 @@ Verificaciones de esta revisión:
 - Creación de orden y navegación comprobadas en el emulador. Se revisaron visualmente los colores Alta/Urgente y el campo Motivo con texto y teclado abierto, completamente visible sobre el teclado.
 - Capturas de esta revisión en `revision_2026-10-29/`. La comprobación de estos cambios en un teléfono físico queda pendiente.
 
-Las pruebas de fotografías están en `app/src/androidTest/java/cl/acis/app/ui/PhotoLoaderTest.kt`. Con un dispositivo de pruebas conectado se pueden ejecutar desde Android Studio o con `gradlew.bat connectedDebugAndroidTest`.
+Las pruebas de fotografías están en `app/src/androidTest/java/cl/acis/app/ui/PhotoLoaderTest.kt`. Su ejecución instrumentada queda sujeta al protocolo vigente de entorno de pruebas desechable y dispositivos con datos importantes desconectados.
 
 ## Ampliación a diez fotografías — 29 de octubre de 2026
 
