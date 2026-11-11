@@ -54,17 +54,16 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val Blue=Color(0xFF125B9A)
-private val Sky=Color(0xFFE4F2FC)
-private fun priorityColor(priority:String)=when(priority) {
- "Alta" -> Color(0xFF87451B)
- "Urgente" -> Color(0xFF9B3038)
- else -> Blue
+@Composable private fun priorityColor(priority: String): Color {
+ val colors = MaterialTheme.colorScheme
+ return when (priority) {
+  "Alta" -> colors.primary
+  "Urgente" -> colors.error
+  else -> colors.tertiary
+ }
 }
+
 private val ControlShape=RoundedCornerShape(6.dp)
-@Composable fun AcisTheme(content: @Composable ()->Unit) {
- MaterialTheme(colorScheme=lightColorScheme(primary=Blue,onPrimary=Color.White,primaryContainer=Sky,onPrimaryContainer=Color(0xFF123A58),background=Color(0xFFF5F8FC),surface=Color.White,secondary=Color(0xFF387A9D),secondaryContainer=Sky,onSecondaryContainer=Blue),content=content)
-}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun AcisApp(vm: AcisViewModel) {
  val s by vm.state.collectAsStateWithLifecycle()
@@ -81,12 +80,14 @@ private val ControlShape=RoundedCornerShape(6.dp)
  Scaffold(topBar={ TopAppBar(
  title={ Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
   Image(androidx.compose.ui.res.painterResource(R.drawable.acis_logo_clean),contentDescription="Logo ACIS",modifier=Modifier.size(42.dp).clip(RoundedCornerShape(8.dp)))
-  Column {Text("ACIS",fontWeight=FontWeight.Bold);Text("SERVICIO EN TERRENO",style=MaterialTheme.typography.labelSmall)}
+  Column {Text("ACIS",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);Text("SERVICIO EN TERRENO",style=MaterialTheme.typography.labelSmall)}
  }},
  navigationIcon={if(route!="orders") IconButton(onClick={goBack()}) {
   Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_undo),contentDescription="Volver",modifier=Modifier.size(24.dp))
  }},
- colors=TopAppBarDefaults.topAppBarColors(containerColor=Blue,titleContentColor=Color.White,navigationIconContentColor=Color.White)
+ colors=TopAppBarDefaults.topAppBarColors(containerColor=MaterialTheme.colorScheme.primaryContainer,
+  titleContentColor=MaterialTheme.colorScheme.onPrimaryContainer,
+  navigationIconContentColor=MaterialTheme.colorScheme.onPrimaryContainer)
  ) },snackbarHost={SnackbarHost(snackbar)},containerColor=MaterialTheme.colorScheme.background) { padding ->
  Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),contentAlignment=Alignment.TopCenter) {
  Column(Modifier.widthIn(max=840.dp).fillMaxWidth()) {
@@ -109,7 +110,12 @@ private val ControlShape=RoundedCornerShape(6.dp)
  else Text("Orden no disponible",Modifier.padding(24.dp))
  }
  composable("visit/{id}") { val current by vm.state.collectAsStateWithLifecycle(); VisitForm(current,vm) { nav.popBackStack() } }
- composable("confirm/{id}") { val current by vm.state.collectAsStateWithLifecycle(); Confirmation(current,vm) { nav.popBackStack() } }
+ composable("confirm/{id}") { back ->
+ val current by vm.state.collectAsStateWithLifecycle()
+ val id=back.arguments?.getString("id")?.toLongOrNull()
+ if(id!=null && current.draft.id==id) Confirmation(current,vm) { nav.popBackStack() }
+ else Text("Orden no disponible",Modifier.padding(24.dp))
+ }
  }
  // Registrado después de NavHost para unificar el retroceso de Android y Volver.
  BackHandler(enabled=route!="orders" && !keyboardVisible) {goBack()}
@@ -125,8 +131,8 @@ private val ControlShape=RoundedCornerShape(6.dp)
  Spacer(Modifier.height(24.dp))
  }
 }
-@Composable private fun Badge(text: String) { Surface(color=Sky,shape=RoundedCornerShape(8.dp)) { Text(text,Modifier.padding(horizontal=10.dp,vertical=6.dp),color=Blue,style=MaterialTheme.typography.labelMedium) } }
-@Composable private fun Info(label: String,value: String) { Column(verticalArrangement=Arrangement.spacedBy(3.dp)) { Text(label,style=MaterialTheme.typography.labelMedium,color=Blue);Text(value.ifBlank { "Sin registrar" }) } }
+@Composable private fun Badge(text: String) { Surface(color=MaterialTheme.colorScheme.tertiaryContainer,contentColor=MaterialTheme.colorScheme.onTertiaryContainer,shape=RoundedCornerShape(8.dp)) { Text(text,Modifier.padding(horizontal=10.dp,vertical=6.dp),style=MaterialTheme.typography.labelMedium) } }
+@Composable private fun Info(label: String,value: String) { Column(verticalArrangement=Arrangement.spacedBy(3.dp)) { Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary);Text(value.ifBlank { "Sin registrar" }) } }
 @Composable private fun ActionIcon(resource:Int) {
  Icon(androidx.compose.ui.res.painterResource(resource),contentDescription=null,modifier=Modifier.size(22.dp))
  Spacer(Modifier.width(8.dp))
@@ -135,7 +141,7 @@ private val ControlShape=RoundedCornerShape(6.dp)
  val context=LocalContext.current
  val coordinates=coordinatesForMaps(value)
  Column(verticalArrangement=Arrangement.spacedBy(3.dp)) {
-  Text(label,style=MaterialTheme.typography.labelMedium,color=Blue)
+  Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
   Row(verticalAlignment=Alignment.CenterVertically) {
    Text(value.ifBlank {"Sin registrar"},modifier=Modifier.weight(1f))
    if(coordinates!=null) IconButton(onClick={
@@ -143,7 +149,7 @@ private val ControlShape=RoundedCornerShape(6.dp)
     clipboard.setPrimaryClip(ClipData.newPlainText("Coordenadas",coordinates))
     if(Build.VERSION.SDK_INT<33) Toast.makeText(context,"Coordenadas copiadas",Toast.LENGTH_SHORT).show()
    }) {
-    Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_copy),contentDescription="Copiar coordenadas",tint=Blue,modifier=Modifier.size(22.dp))
+    Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_copy),contentDescription="Copiar coordenadas",tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(22.dp))
    }
   }
  }
@@ -166,11 +172,14 @@ private val ControlShape=RoundedCornerShape(6.dp)
   Text(label,style=MaterialTheme.typography.labelLarge)
   Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
    options.forEach { option ->
+    val scheme = MaterialTheme.colorScheme
     val colors=when {
+     label=="Prioridad" && option=="Normal" -> FilterChipDefaults.filterChipColors(
+      selectedContainerColor=scheme.tertiaryContainer,selectedLabelColor=scheme.onTertiaryContainer)
      label=="Prioridad" && option=="Alta" -> FilterChipDefaults.filterChipColors(
-      selectedContainerColor=Color(0xFFFCE9D9),selectedLabelColor=Color(0xFF87451B))
+      selectedContainerColor=scheme.primaryContainer,selectedLabelColor=scheme.onPrimaryContainer)
      label=="Prioridad" && option=="Urgente" -> FilterChipDefaults.filterChipColors(
-      selectedContainerColor=Color(0xFFFBE3E2),selectedLabelColor=Color(0xFF9B3038))
+      selectedContainerColor=scheme.errorContainer,selectedLabelColor=scheme.onErrorContainer)
      else -> FilterChipDefaults.filterChipColors()
     }
     FilterChip(selected=option==selected,onClick={onChange(option)},label={Text(option)},shape=ControlShape,colors=colors)
@@ -184,15 +193,35 @@ private val ControlShape=RoundedCornerShape(6.dp)
  val visible=ordersByPriority(s.orders).filter { (filter=="Todas" || if(filter=="Cerradas") it.stage==Stage.CLOSED else it.stage!=Stage.CLOSED) && (it.site+it.equipment+it.technician+it.id).contains(query,true) }
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(top=20.dp,bottom=28.dp)) {
  item { Text("Órdenes de trabajo",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold) }
- item { Surface(color=Sky,shape=RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
- Text("Demostración local",fontWeight=FontWeight.SemiBold);Text("Elige un perfil para recorrer el trabajo. Los datos se guardan en este teléfono.",style=MaterialTheme.typography.bodySmall)
+ item { Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,shape=RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+ Text("Demostración local",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold);Text("Elige un perfil para recorrer el trabajo. Los datos se guardan en este teléfono.",style=MaterialTheme.typography.bodySmall)
  Choice("Ver como",listOf("Técnico","Jefatura","Cliente"),s.role,vm::role)
  } } }
- item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text("${s.orders.count { it.stage!=Stage.CLOSED }} pendientes",fontWeight=FontWeight.Bold);Text("${s.orders.count { it.stage==Stage.CLOSED }} cerradas",color=Blue) } }
+ item {
+  if(s.completeOrderList) {
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+    Text("${s.orders.count { it.stage!=Stage.CLOSED }} pendientes",fontWeight=FontWeight.Bold)
+    Text("${s.orders.count { it.stage==Stage.CLOSED }} cerradas",color=MaterialTheme.colorScheme.primary)
+   }
+  } else Text(if(s.busy) "Leyendo órdenes…" else "${s.orders.size} órdenes disponibles · listado incompleto")
+ }
+ if(s.orderReadError!=null || s.unreadableOrderIds.isNotEmpty()) item {
+  Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.errorContainer)) {
+   Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+    s.orderReadError?.let {Text(it)}
+    if(s.unreadableOrderIds.isNotEmpty()) {
+     Text("No se pudieron interpretar ${s.unreadableOrderIds.size} órdenes. Sus registros permanecen guardados en este teléfono.")
+     Text("Órdenes afectadas: "+s.unreadableOrderIds.take(10).joinToString { "OT "+it.toString().padStart(4,'0') }+
+      if(s.unreadableOrderIds.size>10) "…" else "")
+    }
+    TextButton(shape=ControlShape,onClick=vm::retry,enabled=!s.busy) {Text("Reintentar lectura")}
+   }
+  }
+ }
  item { if(s.role=="Jefatura") Button(shape=ControlShape,onClick=onNew,modifier=Modifier.fillMaxWidth()) { Text("+ Crear orden") } }
  item { Field("Buscar órdenes",query,onChange={query=it});Choice("Mostrar",listOf("Todas","Pendientes","Cerradas"),filter) {filter=it} }
- if(visible.isEmpty()) item { Card(colors=CardDefaults.cardColors(containerColor=Color.White)) { Column(Modifier.fillMaxWidth().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) { Text(if(s.orders.isEmpty()) "Comencemos con la primera visita" else "No encontramos órdenes",fontWeight=FontWeight.Bold);Text(if(s.orders.isEmpty()) "En el perfil Jefatura puedes crear una orden para un local y asignar un técnico." else "Prueba otra búsqueda o cambia el filtro.");TextButton(shape=ControlShape,onClick=vm::retry) {Text("Actualizar")} } } }
- items(visible,key={it.id}) { o -> Card(onClick={onOpen(o.id)},colors=CardDefaults.cardColors(containerColor=Color.White),modifier=Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text("OT · ${o.id.toString().padStart(4,'0')}",color=Blue,fontWeight=FontWeight.Bold);Badge(o.stage.label) };Text(o.site,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold);Text(o.equipment);Text(o.address,style=MaterialTheme.typography.bodySmall);HorizontalDivider();Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {Text(o.priority,color=priorityColor(o.priority),style=MaterialTheme.typography.labelLarge);Text("· ${o.technician}",style=MaterialTheme.typography.labelLarge)} } } }
+ if(visible.isEmpty() && s.completeOrderList) item { Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLow)) { Column(Modifier.fillMaxWidth().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) { Text(if(s.emptyDatabase) "Comencemos con la primera visita" else "No encontramos órdenes",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(if(s.emptyDatabase) "En el perfil Jefatura puedes crear una orden para un local y asignar un técnico." else "Prueba otra búsqueda o cambia el filtro.");TextButton(shape=ControlShape,onClick=vm::retry,enabled=!s.busy) {Text("Actualizar")} } } }
+ items(visible,key={it.id}) { o -> Card(onClick={onOpen(o.id)},colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLow),modifier=Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text("OT · ${o.id.toString().padStart(4,'0')}",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Badge(o.stage.label) };Text(o.site,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold);Text(o.equipment);Text(o.address,style=MaterialTheme.typography.bodySmall);HorizontalDivider();Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {Text(o.priority,color=priorityColor(o.priority),style=MaterialTheme.typography.labelLarge);Text("· ${o.technician}",style=MaterialTheme.typography.labelLarge)} } } }
  }
 }
 @Composable private fun OrderForm(s:UiState,vm:AcisViewModel,done:(Long)->Unit) {
@@ -212,12 +241,12 @@ private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat
 @Composable private fun OrderDetail(o:Order,s:UiState,vm:AcisViewModel,onDeleted:()->Unit,open:(String)->Unit) {
  var confirmDelete by rememberSaveable(o.id) {mutableStateOf(false)}
  if(confirmDelete && s.role=="Jefatura") AlertDialog(
-  containerColor=Color.White,shape=RoundedCornerShape(12.dp),
+  shape=RoundedCornerShape(12.dp),
   onDismissRequest={if(!s.busy) confirmDelete=false},
-  icon={Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_delete_order),null,modifier=Modifier.size(28.dp),tint=Color(0xFF9B3038))},
+  icon={Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_delete_order),null,modifier=Modifier.size(28.dp),tint=MaterialTheme.colorScheme.error)},
   title={Text("¿Eliminar esta orden?")},
   text={Text("OT ${o.id} · ${o.site}\nSe eliminarán el registro local y sus fotografías. Esta acción no se puede deshacer.")},
-  confirmButton={TextButton(enabled=!s.busy,onClick={vm.deleteOrder(o.id,onDeleted)}) {Text("Eliminar orden",color=Color(0xFF9B3038))}},
+  confirmButton={TextButton(enabled=!s.busy,onClick={vm.deleteOrder(o.id,onDeleted)},colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.error)) {Text("Eliminar orden")}},
   dismissButton={TextButton(enabled=!s.busy,onClick={confirmDelete=false}) {Text("Cancelar")}}
  )
  Page("OT ${o.id.toString().padStart(4,'0')}",o.site) {
@@ -238,10 +267,17 @@ private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat
  Stage.ACTIVE -> Button(shape=ControlShape,onClick={open("visit")},modifier=Modifier.fillMaxWidth()) {Text("Registrar intervención")}
  else -> Unit
  }
- if(s.role=="Jefatura") Button(shape=ControlShape,enabled=!s.busy,onClick={confirmDelete=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFFBE3E2),contentColor=Color(0xFF9B3038))) {
+ if(s.role=="Jefatura") Button(shape=ControlShape,enabled=!s.busy,onClick={confirmDelete=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.errorContainer,contentColor=MaterialTheme.colorScheme.onErrorContainer)) {
   ActionIcon(R.drawable.ic_delete_order);Text("Eliminar orden")
  }
- if(s.role=="Cliente" && o.stage==Stage.DONE) Button(shape=ControlShape,onClick={open("confirm")},modifier=Modifier.fillMaxWidth()) {Text("Revisar y confirmar trabajo")}
+ if(o.stage==Stage.DONE) {
+  if(o.customerConfirmed) {
+   Text("Pendiente de aprobación de Jefatura")
+   if(s.role=="Jefatura") Button(shape=ControlShape,onClick={vm.approveAndClose(o.id)},enabled=!s.busy,modifier=Modifier.fillMaxWidth()) {Text("Aprobar y cerrar")}
+  } else if(s.role=="Cliente") {
+   Button(shape=ControlShape,onClick={open("confirm")},enabled=!s.busy,modifier=Modifier.fillMaxWidth()) {Text("Revisar y confirmar trabajo")}
+  }
+ }
  }
 }
 @Composable private fun Photo(path:String) {
@@ -264,7 +300,7 @@ private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat
    items(paths,key={it}) { path ->
     Column(Modifier.width(260.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
      Photo(path)
-     if(onRemove!=null) Button(shape=ControlShape,onClick={onRemove(path)},enabled=enabled,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFFBE3E2),contentColor=Color(0xFF9B3038))) {
+     if(onRemove!=null) Button(shape=ControlShape,onClick={onRemove(path)},enabled=enabled,modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.errorContainer,contentColor=MaterialTheme.colorScheme.onErrorContainer)) {
       Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_delete_photo),contentDescription=null,modifier=Modifier.size(20.dp))
       Spacer(Modifier.width(8.dp))
       Text("Eliminar")
@@ -310,11 +346,11 @@ private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat
  Field("Trabajo realizado",o.work,s.errors["work"],true) {vm.change(o.copy(work=it))}
  Field("Materiales (opcional)",o.materials,multiline=true) {vm.change(o.copy(materials=it))}
  Photos(o.evidencePhotos,enabled=!s.busy,onRemove=vm::removePhoto)
- Button(shape=ControlShape,colors=ButtonDefaults.buttonColors(containerColor=Sky,contentColor=Blue),onClick={
+ Button(shape=ControlShape,colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer),onClick={
   try {val dir=File(context.filesDir,"evidencias").apply {mkdirs()};val f=File.createTempFile("ot_${o.id}_",".jpg",dir);pending=f.absolutePath;camera.launch(FileProvider.getUriForFile(context,context.packageName+".files",f))}
   catch(e:Exception) {vm.notify("No se pudo abrir la cámara. Verifica que haya una aplicación de cámara disponible.")}
  },enabled=!s.busy && o.evidencePhotos.size<Rules.MAX_PHOTOS,modifier=Modifier.fillMaxWidth()) {ActionIcon(R.drawable.ic_camera);Text("Tomar fotografía")}
- Button(shape=ControlShape,colors=ButtonDefaults.buttonColors(containerColor=Sky,contentColor=Blue),onClick={
+ Button(shape=ControlShape,colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.secondaryContainer,contentColor=MaterialTheme.colorScheme.onSecondaryContainer),onClick={
   try {gallery.launch(arrayOf("image/*"))} catch(e:Exception) {vm.notify("No se pudo abrir el selector de fotografías.")}
  },enabled=!s.busy && o.evidencePhotos.size<Rules.MAX_PHOTOS,modifier=Modifier.fillMaxWidth()) {ActionIcon(R.drawable.ic_gallery);Text("Elegir del teléfono")}
  if(o.evidencePhotos.size>=Rules.MAX_PHOTOS) Text("Llegaste al máximo de 10 fotos. Quita una para agregar otra.",style=MaterialTheme.typography.bodySmall)
@@ -329,12 +365,13 @@ private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat
 }
 @Composable private fun Confirmation(s:UiState,vm:AcisViewModel,done:()->Unit) {
  val o=s.draft
- var accepted by rememberSaveable {mutableStateOf(false)}
+ var accepted by rememberSaveable(o.id) {mutableStateOf(false)}
  Page("Conformidad del cliente","Revisa el trabajo realizado antes de confirmar.") {
  Info("Local",o.site);Info("Trabajo",o.work);if(o.location.isNotBlank()) CoordinateInfo("Ubicación registrada",o.location);Photos(o.evidencePhotos)
  Field("Nombre de quien confirma",o.customer,s.errors["customer"]) {vm.change(o.copy(customer=it))}
  Field("Observaciones (opcional)",o.feedback,multiline=true) {vm.change(o.copy(feedback=it))}
  Row(verticalAlignment=Alignment.CenterVertically) {Checkbox(checked=accepted,onCheckedChange={accepted=it});Text("Confirmo mi conformidad con el trabajo",Modifier.weight(1f))}
- Button(shape=ControlShape,onClick={vm.advance(o,Stage.CLOSED,customerAccepted=accepted) {done()}},enabled=accepted&&!s.busy,modifier=Modifier.fillMaxWidth()) {Text("Confirmar y cerrar orden")}
+ s.errors["accepted"]?.let {Text(it,color=MaterialTheme.colorScheme.error)}
+ Button(shape=ControlShape,onClick={vm.registerConfirmation(o.id,accepted) {done()}},enabled=!s.busy,modifier=Modifier.fillMaxWidth()) {Text("Registrar conformidad")}
  }
 }

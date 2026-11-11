@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import cl.acis.app.model.Order
+import cl.acis.app.model.Stage
 import cl.acis.app.ui.loadEvidencePhoto
 import java.io.File
 import java.util.UUID
@@ -55,13 +56,40 @@ class EvidencePersistenceTest {
         val name = "test_${UUID.randomUUID()}.db"
         val repo = LocalOrderRepository(context, name)
         try {
-            repo.save(Order(photo="foto_antigua.jpg"))
+            repo.save(Order(stage=Stage.CLOSED, customer="Ana", photo="foto_antigua.jpg"))
             val payload = repo.readableDatabase.rawQuery("SELECT payload FROM orders", null).use {
-                it.moveToFirst(); JSONObject(it.getString(0)).apply { remove("photos") }
+                it.moveToFirst(); JSONObject(it.getString(0)).apply {
+                    remove("photos")
+                    remove("customerConfirmed")
+                }
             }
             repo.writableDatabase.update("orders", ContentValues().apply { put("payload", payload.toString()) }, null, null)
-            assertEquals(listOf("foto_antigua.jpg"), repo.all().single().evidencePhotos)
+            val loaded = repo.all().single()
+            assertEquals(listOf("foto_antigua.jpg"), loaded.evidencePhotos)
+            assertEquals(Stage.CLOSED, loaded.stage)
+            assertEquals("Ana", loaded.customer)
+            assertFalse(loaded.customerConfirmed)
         } finally { repo.close(); context.deleteDatabase(name) }
+    }
+
+    @Test fun confirmationSurvivesReopeningBeforeAndAfterApproval() = runBlocking {
+        val name = "test_${UUID.randomUUID()}.db"
+        val confirmed = Order(
+            stage = Stage.DONE, customer = "Ana", feedback = "Conforme",
+            customerConfirmed = true, location = "Ubicación de prueba", arrival = 100, departure = 200
+        ).withPhotos(listOf("foto1.jpg", "foto2.jpg"))
+        val saved = LocalOrderRepository(context, name).use { repo ->
+            confirmed.copy(id = repo.save(confirmed))
+        }
+        try {
+            LocalOrderRepository(context, name).use { repo ->
+                assertEquals(saved, repo.all().single())
+                repo.save(saved.copy(stage = Stage.CLOSED))
+            }
+            LocalOrderRepository(context, name).use { repo ->
+                assertEquals(saved.copy(stage = Stage.CLOSED), repo.all().single())
+            }
+        } finally { context.deleteDatabase(name) }
     }
 
     @Test fun repositoryRejectsElevenPhotos() = runBlocking {

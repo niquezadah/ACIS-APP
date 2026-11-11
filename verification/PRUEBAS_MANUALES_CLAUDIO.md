@@ -1,5 +1,9 @@
 # PRUEBAS MANUALES — ACIS APP
 
+**Protocolo vigente desde el 11/11/2026.** Aplicar el [protocolo de protección de datos](VERIFICACION.md#protocolo-de-protección-de-datos) antes de repetir pruebas. Los recorridos manuales en un dispositivo físico con datos importantes utilizan la aplicación ya instalada y órdenes ficticias identificadas. Las pruebas instrumentadas requieren un entorno de pruebas desechable identificado y autorizado, con los dispositivos que contienen datos importantes desconectados. Las secciones siguientes conservan la evidencia histórica del 29/10/2026 y no autorizan instalaciones, borrado de datos ni repetición automática de pruebas.
+
+**Alcance del registro histórico.** Los resultados siguientes corresponden a la versión que cerraba la orden al registrar la conformidad del Cliente. El flujo actual incorpora la aprobación final de Jefatura y se describe en el README. La [revisión local posterior](VERIFICACION.md#lectura-de-órdenes-y-verificaciones-locales--11-de-noviembre-de-2026) documenta las comprobaciones locales y los pendientes de lectura de órdenes. Se conservan los responsables, dispositivos, resultados y observaciones originales de este registro.
+
 **Asignatura:** DSY1105 – Desarrollo de Aplicaciones Móviles  
 **Institución:** Duoc UC  
 **Evaluación:** Parcial 2  
