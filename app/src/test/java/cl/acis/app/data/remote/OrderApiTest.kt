@@ -64,14 +64,16 @@ class OrderApiTest {
             photos = listOf("/private/photo-one.jpg", "/private/photo-two.jpg")
         )
 
-        val response = api.createOrder(local.toCreateRequestDto())
+        val response = api.createOrder(local.toCreateRequestDto(CLIENT_ORDER_ID))
         val request = server.takeRequest()
         val json = request.body.readUtf8()
 
         assertEquals("POST", request.method)
         assertEquals("/api/ordenes", request.path)
         assertEquals(201, response.code())
-        assertNull(Gson().fromJson(json, OrderRequestDto::class.java).id)
+        val body = Gson().fromJson(json, OrderRequestDto::class.java)
+        assertNull(body.id)
+        assertEquals(CLIENT_ORDER_ID, body.clientOrderId)
         assertTrue(json.contains("\"evidenceCount\":2"))
         assertTrue(json.contains("\"stage\":\"ASSIGNED\""))
         assertFalse(json.contains("photo"))
@@ -83,7 +85,7 @@ class OrderApiTest {
         server.enqueue(MockResponse().setBody(orderJson(id = 91)))
         val local = Order(id = 15, site = "Local")
 
-        val response = api.updateOrder(91, local.toUpdateRequestDto(remoteId = 91))
+        val response = api.updateOrder(91, local.toUpdateRequestDto(CLIENT_ORDER_ID).copy(id = 91))
         val request = server.takeRequest()
         val body = Gson().fromJson(request.body.readUtf8(), OrderRequestDto::class.java)
 
@@ -114,20 +116,24 @@ class OrderApiTest {
     }
 
     @Test
-    fun updateMapperRejectsInvalidRemoteIds() {
+    fun updateMapperRejectsBlankIdempotencyKey() {
         assertThrows(IllegalArgumentException::class.java) {
-            Order(id = 15).toUpdateRequestDto(remoteId = 0)
+            Order(id = 15).toUpdateRequestDto("")
         }
     }
 
     private fun orderJson(id: Long, stage: String = "ASSIGNED") = """
         {
-          "id":$id,"site":"Local","address":"Calle","equipment":"Equipo",
+          "id":$id,"clientOrderId":"$CLIENT_ORDER_ID","site":"Local","address":"Calle","equipment":"Equipo",
           "technician":"Técnico","priority":"Normal","type":"Preventiva",
           "problem":"Falla de prueba","stage":"$stage","diagnosis":"",
           "work":"","materials":"","location":"","arrival":0,"departure":0,
           "customer":"","feedback":"","customerConfirmed":false,"evidenceCount":2
         }
     """.trimIndent()
+
+    private companion object {
+        const val CLIENT_ORDER_ID = "a5796a8e-8497-4cc2-bdbf-44f1ab736c71"
+    }
 
 }

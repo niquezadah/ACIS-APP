@@ -7,6 +7,7 @@ import com.google.gson.annotations.SerializedName
 /** Request REST: deliberadamente no contiene `photo` ni `photos` locales. */
 data class OrderRequestDto(
     @SerializedName("id") val id: Long?,
+    @SerializedName("clientOrderId") val clientOrderId: String,
     @SerializedName("site") val site: String,
     @SerializedName("address") val address: String,
     @SerializedName("equipment") val equipment: String,
@@ -29,6 +30,7 @@ data class OrderRequestDto(
 
 data class OrderResponseDto(
     @SerializedName("id") val id: Long,
+    @SerializedName("clientOrderId") val clientOrderId: String?,
     @SerializedName("site") val site: String,
     @SerializedName("address") val address: String,
     @SerializedName("equipment") val equipment: String,
@@ -52,6 +54,7 @@ data class OrderResponseDto(
 /** La identidad remota queda separada del ID autoincremental local de SQLite. */
 data class RemoteOrder(
     val remoteId: Long,
+    val clientOrderId: String?,
     val order: Order,
     val evidenceCount: Int
 )
