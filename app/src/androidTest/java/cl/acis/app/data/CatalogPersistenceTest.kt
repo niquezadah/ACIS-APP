@@ -33,7 +33,7 @@ class CatalogPersistenceTest {
         old.close()
         try {
             LocalOrderRepository(context, name).use { repo ->
-                assertEquals(2, repo.readableDatabase.version)
+                assertEquals(3, repo.readableDatabase.version)
                 repo.readableDatabase.rawQuery("SELECT id,payload FROM orders", null).use { c ->
                     assertTrue(c.moveToFirst()); assertEquals(25L, c.getLong(0)); assertEquals(original, c.getString(1))
                 }
