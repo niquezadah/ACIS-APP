@@ -3,6 +3,7 @@ package cl.acis.app.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.layout.ContentScale
 import cl.acis.app.R
+import cl.acis.app.connected.*
 import android.content.ClipboardManager
 import android.content.ClipData
 import android.content.Context
@@ -65,7 +66,7 @@ import java.util.Locale
 
 internal val ControlShape=RoundedCornerShape(6.dp)
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun AcisApp(vm: AcisViewModel, catalogVm: CatalogViewModel) {
+@Composable fun AcisApp(vm: AcisViewModel, catalogVm: CatalogViewModel, store:FieldStore, syncStatus:String, conflict:Long?, logout:()->Unit) {
  val s by vm.state.collectAsStateWithLifecycle()
  val catalogState by catalogVm.state.collectAsStateWithLifecycle()
  val nav=rememberNavController()
@@ -105,8 +106,9 @@ internal val ControlShape=RoundedCornerShape(6.dp)
   popEnterTransition={slideInHorizontally(tween(160,easing=FastOutSlowInEasing)) {-it}},
   popExitTransition={slideOutHorizontally(tween(160,easing=FastOutSlowInEasing)) {it}}
  ) {
- composable("orders") { val current by vm.state.collectAsStateWithLifecycle(); OrderList(current,vm,onOpen={nav.navigate("detail/$it")},onNew={vm.edit(Order());nav.navigate("new")},onCatalog={nav.navigate("catalog/$it")}) }
- composable("new") { val current by vm.state.collectAsStateWithLifecycle(); OrderForm(current,vm,catalogState,catalogVm,onManage={nav.navigate("catalog/$it")}) { id -> nav.navigate("detail/$id") { popUpTo("orders") } } }
+ composable("account") { ProfileScreen(store,logout){nav.popBackStack()} }
+ composable("orders") { val current by vm.state.collectAsStateWithLifecycle(); OrderList(current,vm,syncStatus,{conflict?.let {ResolveConflict(store,it,vm)}},{nav.navigate("account")},onOpen={nav.navigate("detail/$it")},onNew={vm.edit(Order(creationKey=java.util.UUID.randomUUID().toString()));nav.navigate("new")},onCatalog={nav.navigate("catalog/$it")}) }
+ composable("new") { val current by vm.state.collectAsStateWithLifecycle(); OrderForm(current,vm,catalogState,catalogVm,store.network.field,onManage={nav.navigate("catalog/$it")}) { id -> nav.navigate("detail/$id") { popUpTo("orders") } } }
  composable("catalog/{kind}") { back ->
   if(s.role=="Jefatura") CatalogList(back.arguments?.getString("kind")=="technicians",catalogState,catalogVm) { id -> nav.navigate("catalog/"+back.arguments?.getString("kind")+"/$id") }
   else Text("Solo Jefatura puede administrar estos registros",Modifier.padding(20.dp))
@@ -118,7 +120,7 @@ internal val ControlShape=RoundedCornerShape(6.dp)
  composable("detail/{id}") { back ->
  val current by vm.state.collectAsStateWithLifecycle()
  val order=current.orders.find { it.id==back.arguments?.getString("id")?.toLongOrNull() }
- if(order!=null) OrderDetail(order,current,vm,onDeleted={nav.popBackStack("orders",false)}) { target -> vm.edit(order);nav.navigate(target+"/"+order.id) }
+ if(order!=null) OrderDetail(order,current,vm,store.network.field,onDeleted={nav.popBackStack("orders",false)}) { target -> vm.edit(order);nav.navigate(if(target=="new") "new" else target+"/"+order.id) }
  else Text("Orden no disponible",Modifier.padding(24.dp))
  }
  composable("visit/{id}") { val current by vm.state.collectAsStateWithLifecycle(); VisitForm(current,vm) { nav.popBackStack() } }
@@ -199,15 +201,17 @@ internal val ControlShape=RoundedCornerShape(6.dp)
   }
  }
 }
-@Composable private fun OrderList(s: UiState,vm:AcisViewModel,onOpen:(Long)->Unit,onNew:()->Unit,onCatalog:(String)->Unit) {
+@Composable private fun OrderList(s: UiState,vm:AcisViewModel,syncStatus:String,resolution:@Composable ()->Unit,account:()->Unit,onOpen:(Long)->Unit,onNew:()->Unit,onCatalog:(String)->Unit) {
  var query by rememberSaveable { mutableStateOf("") }
  var filter by rememberSaveable { mutableStateOf("Todas") }
  val visible=ordersByPriority(s.orders).filter { (filter=="Todas" || if(filter=="Cerradas") it.stage==Stage.CLOSED else it.stage!=Stage.CLOSED) && (it.site+it.equipment+it.technician+it.id).contains(query,true) }
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(top=20.dp,bottom=28.dp)) {
  item { Text("Órdenes de trabajo",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold) }
  item { Surface(color=MaterialTheme.colorScheme.surfaceContainerLow,shape=RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
- Text("Demostración local",style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold);Text("Elige un perfil para recorrer el trabajo. Los datos se guardan en este teléfono.",style=MaterialTheme.typography.bodySmall)
- Choice("Ver como",listOf("Técnico","Jefatura","Cliente"),s.role,vm::role)
+ Text(s.role,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+ Text(syncStatus,style=MaterialTheme.typography.bodySmall)
+ resolution()
+ TextButton(onClick=account){Text(if(s.role=="Administrador") "Administrar cuentas" else "Mi cuenta")}
  } } }
  item {
   if(s.completeOrderList) {
@@ -230,6 +234,7 @@ internal val ControlShape=RoundedCornerShape(6.dp)
    }
   }
  }
+ if(s.role=="Jefatura") item { ReportButton(s.orders) }
  if(s.role=="Jefatura") item {
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
    OutlinedButton(onClick={onCatalog("technicians")},shape=ControlShape,modifier=Modifier.weight(1f)) {Text("Técnicos")}
@@ -242,23 +247,29 @@ internal val ControlShape=RoundedCornerShape(6.dp)
  items(visible,key={it.id}) { o -> Card(onClick={onOpen(o.id)},colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLow),modifier=Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text("OT · ${o.id.toString().padStart(4,'0')}",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Badge(o.stage.label) };Text(o.site,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold);Text(o.equipment);Text(o.address,style=MaterialTheme.typography.bodySmall);HorizontalDivider();Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {Text(o.priority,color=priorityColor(o.priority),style=MaterialTheme.typography.labelLarge);Text("· ${o.technician}",style=MaterialTheme.typography.labelLarge)} } } }
  }
 }
-@Composable private fun OrderForm(s:UiState,vm:AcisViewModel,c:CatalogState,catalogVm:CatalogViewModel,onManage:(String)->Unit,done:(Long)->Unit) {
+@Composable private fun OrderForm(s:UiState,vm:AcisViewModel,c:CatalogState,catalogVm:CatalogViewModel,api:FieldApi,onManage:(String)->Unit,done:(Long)->Unit) {
  val o=s.draft
  if(s.role!="Jefatura") {Text("Solo Jefatura puede crear órdenes",Modifier.padding(20.dp));return}
  val sites=c.catalog.sites.filter {it.active}
  val technicians=c.catalog.technicians.filter {it.active}
- Page("Nueva orden","Selecciona un local y un técnico registrados para esta visita.") {
+ Page(if(o.id==0L) "Nueva orden" else "Editar orden","Selecciona un local y un técnico registrados para esta visita.") {
  if(c.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
  c.readError?.let {CatalogReadError(it,catalogVm::refresh)}
  CatalogSelector("Local",o.siteId,sites.find {it.id==o.siteId}?.name ?: o.site,
   sites.map {it.id to "${it.name} · ${it.address}"},s.errors["site"],c.loaded && c.readError==null && !c.busy && !s.busy) {id ->
-   sites.find {it.id==id}?.let {vm.change(o.copy(siteId=it.id,site=it.name,address=it.address,siteClient=it.client))}
+   sites.find {it.id==id}?.let {vm.change(o.copy(siteId=it.id,site=it.name,address=it.address,siteClient=it.client,equipment=if(it.id==o.siteId)o.equipment else ""))}
  }
  if(c.loaded && sites.isEmpty()) Text("Registra un local activo para crear una orden.")
  TextButton(onClick={onManage("sites")},shape=ControlShape,enabled=!s.busy) {Text("Administrar locales")}
  val selectedSite=sites.find {it.id==o.siteId}
  if(selectedSite!=null) {Info("Dirección",selectedSite.address);Info("Cliente o empresa",selectedSite.client)}
- Field("Equipo / identificación",o.equipment,s.errors["equipment"]) {vm.change(o.copy(equipment=it))}
+ EquipmentPicker(api,o.siteId,o.equipment,s.errors["equipment"]){vm.change(o.copy(equipment=it))}
+ Field("Fecha de visita (AAAA-MM-DD)",o.scheduled,s.errors["scheduled"]) {vm.change(o.copy(scheduled=it))}
+ Field("Plazo de atención acordado (horas)",o.slaHours.takeIf {it>0}?.toString().orEmpty(),s.errors["sla"]) {vm.change(o.copy(slaHours=it.toIntOrNull() ?: 0))}
+ Text("Para equipos exteriores, ingresa las coordenadas del local y revisa el pronóstico.")
+ Field("Latitud del local",o.latitude,s.errors["coordinates"]) {vm.change(o.copy(latitude=it.replace(',','.')))}
+ Field("Longitud del local",o.longitude) {vm.change(o.copy(longitude=it.replace(',','.')))}
+ WeatherNotice(o)
  CatalogSelector("Técnico asignado",o.technicianId,technicians.find {it.id==o.technicianId}?.name ?: o.technician,
   technicians.map {it.id to "${it.name} · ${it.email}"},s.errors["technician"],c.loaded && c.readError==null && !c.busy && !s.busy) {id ->
    technicians.find {it.id==id}?.let {vm.change(o.copy(technicianId=it.id,technician=it.name))}
@@ -268,23 +279,27 @@ internal val ControlShape=RoundedCornerShape(6.dp)
  Choice("Prioridad",listOf("Normal","Alta","Urgente"),o.priority) {vm.change(o.copy(priority=it))}
  Choice("Tipo de mantención",listOf("Preventiva","Correctiva"),o.type) {vm.change(o.copy(type=it))}
  Field("Motivo de la visita",o.problem,s.errors["problem"],true) {vm.change(o.copy(problem=it))}
- Button(shape=ControlShape,onClick={vm.saveNew(done)},enabled=!s.busy && !c.busy && c.loaded && c.readError==null && sites.isNotEmpty() && technicians.isNotEmpty(),modifier=Modifier.fillMaxWidth()) {Text("Crear orden")}
+ Button(shape=ControlShape,onClick={vm.saveNew(done)},enabled=!s.busy && !c.busy && c.loaded && c.readError==null && sites.isNotEmpty() && technicians.isNotEmpty(),modifier=Modifier.fillMaxWidth()) {Text(if(o.id==0L) "Crear orden" else "Guardar cambios")}
  }
 }
 private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat("dd/MM/yyyy · HH:mm",Locale.forLanguageTag("es-CL")).format(Date(value))
-@Composable private fun OrderDetail(o:Order,s:UiState,vm:AcisViewModel,onDeleted:()->Unit,open:(String)->Unit) {
+@Composable private fun OrderDetail(o:Order,s:UiState,vm:AcisViewModel,api:FieldApi,onDeleted:()->Unit,open:(String)->Unit) {
  var confirmDelete by rememberSaveable(o.id) {mutableStateOf(false)}
  if(confirmDelete && s.role=="Jefatura") AlertDialog(
   shape=RoundedCornerShape(12.dp),
   onDismissRequest={if(!s.busy) confirmDelete=false},
   icon={Icon(androidx.compose.ui.res.painterResource(R.drawable.ic_delete_order),null,modifier=Modifier.size(28.dp),tint=MaterialTheme.colorScheme.error)},
   title={Text("¿Eliminar esta orden?")},
-  text={Text("OT ${o.id} · ${o.site}\nSe eliminarán el registro local y sus fotografías. Esta acción no se puede deshacer.")},
+  text={Text("OT ${o.id} · ${o.site}\nSe eliminarán la orden y sus fotografías del servidor. Esta acción no se puede deshacer.")},
   confirmButton={TextButton(enabled=!s.busy,onClick={vm.deleteOrder(o.id,onDeleted)},colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.error)) {Text("Eliminar orden")}},
   dismissButton={TextButton(enabled=!s.busy,onClick={confirmDelete=false}) {Text("Cancelar")}}
  )
  Page("OT ${o.id.toString().padStart(4,'0')}",o.site) {
  OrderTimeline(o.stage)
+ History(api,o.id,o.serverRevision)
+ Info("Visita programada",o.scheduled)
+ if(o.created>0) Info("Plazo de atención",serviceDeadline(o,System.currentTimeMillis()))
+ if(s.role=="Técnico" || s.role=="Jefatura") WeatherNotice(o)
  Info("Equipo",o.equipment);Info("Dirección",o.address);Info("Asignación","${o.technician} · ${o.priority} · ${o.type}");Info("Motivo",o.problem)
  HorizontalDivider()
  Info("Llegada",time(o.arrival));Info("Salida",time(o.departure))
@@ -301,6 +316,7 @@ private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat
  Stage.ACTIVE -> Button(shape=ControlShape,onClick={open("visit")},modifier=Modifier.fillMaxWidth()) {Text("Registrar intervención")}
  else -> Unit
  }
+ if(s.role=="Jefatura" && o.stage==Stage.ASSIGNED) OutlinedButton(onClick={open("new")},shape=ControlShape){Text("Editar o reagendar orden")}
  if(s.role=="Jefatura") Button(shape=ControlShape,enabled=!s.busy,onClick={confirmDelete=true},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=MaterialTheme.colorScheme.errorContainer,contentColor=MaterialTheme.colorScheme.onErrorContainer)) {
   ActionIcon(R.drawable.ic_delete_order);Text("Eliminar orden")
  }

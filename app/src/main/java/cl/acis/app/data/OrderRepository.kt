@@ -18,6 +18,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 interface OrderRepository {
+    suspend fun savedSnapshot(order:Order,id:Long):Order=order.copy(id=id)
     suspend fun all(): List<Order>
     suspend fun read(): OrderReadResult = OrderReadResult(all())
     suspend fun save(order: Order): Long

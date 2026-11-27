@@ -62,7 +62,7 @@ class CatalogViewModel(private val repository: CatalogRepository, private val ro
             try {
                 write()
                 load()
-                mutable.value = state.value.copy(message = "Registro guardado en este teléfono")
+                mutable.value = state.value.copy(message = "Registro guardado")
                 done()
             } catch (e: CancellationException) { throw e }
             catch (_: CatalogConflictException) {

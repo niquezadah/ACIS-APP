@@ -104,7 +104,7 @@ class AcisViewModel(private val repository: OrderRepository, private val evidenc
     if(state.value.completeOrderList) {
      runCatching {evidenceStore.discard(order.evidencePhotos.filterNot {it in referenced})}
     }
-    notify("Orden eliminada de este teléfono")
+    notify("Orden eliminada")
     done()
    } catch(e:kotlinx.coroutines.CancellationException) {throw e}
    catch(e:Exception) {notify("No se pudo eliminar la orden. Vuelve a intentarlo.")}
@@ -115,7 +115,7 @@ class AcisViewModel(private val repository: OrderRepository, private val evidenc
   if(state.value.role!="Jefatura") {notify("Solo Jefatura puede crear una orden.");return}
   if(state.value.busy) return
   val draft=state.value.draft
-  if(draft.id!=0L || draft.stage!=Stage.ASSIGNED) return
+  if(draft.stage!=Stage.ASSIGNED || draft.id!=0L && state.value.orders.none {it.id==draft.id && it.stage==Stage.ASSIGNED}) return
   mutable.value=state.value.copy(busy=true)
   viewModelScope.launch {
    try {
@@ -127,9 +127,9 @@ class AcisViewModel(private val repository: OrderRepository, private val evidenc
     mutable.value=state.value.copy(errors=errors)
     if(errors.isNotEmpty()) return@launch
     val id=repository.save(order)
-    val saved=order.copy(id=id)
-    mutable.value=state.value.copy(orders=listOf(saved)+state.value.orders,draft=saved,errors=emptyMap())
-    notify("Guardado en este teléfono")
+    val saved=repository.savedSnapshot(order,id)
+    mutable.value=state.value.copy(orders=listOf(saved)+state.value.orders.filterNot {it.id==id},draft=saved,errors=emptyMap())
+    notify("Cambios guardados")
     done(id)
    } catch(e:kotlinx.coroutines.CancellationException) {throw e}
    catch(e:Exception) {notify("No se pudo crear la orden. Revisa los registros y vuelve a intentarlo.")}
@@ -175,7 +175,7 @@ class AcisViewModel(private val repository: OrderRepository, private val evidenc
   val current=state.value
   if(current.busy) return
   val order=current.orders.find {it.id==o.id}
-  if(to==Stage.CLOSED || order?.stage!=o.stage || !Rules.canMove(o.stage,to)) {
+  if(current.role!="Técnico" || to==Stage.CLOSED || order?.stage!=o.stage || !Rules.canMove(o.stage,to)) {
    notify("Esta acción no corresponde al estado actual.");return
   }
   val errors=if(to==Stage.DONE) Rules.closing(o) else emptyMap()
@@ -216,11 +216,11 @@ class AcisViewModel(private val repository: OrderRepository, private val evidenc
   viewModelScope.launch {
    try {
     val id=repository.save(o)
-    val saved=o.copy(id=id)
+    val saved=repository.savedSnapshot(o,id)
     val orders=state.value.orders
     val updated=if(o.id==0L) listOf(saved)+orders else orders.map {if(it.id==id) saved else it}
     mutable.value=state.value.copy(orders=updated,draft=saved,errors=emptyMap())
-    notify("Guardado en este teléfono")
+    notify("Cambios guardados")
     done(id)
    }
    catch(e: Exception) { notify("No se pudo guardar. Tus datos siguen en el formulario; vuelve a intentarlo.") }
