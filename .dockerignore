@@ -1,0 +1,6 @@
+**
+!acis-microservicio/
+!cuentas/
+!*/pom.xml
+!*/src/
+!*/src/**

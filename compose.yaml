@@ -1,0 +1,59 @@
+name: acis-entrega
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ordenes
+      POSTGRES_PASSWORD: ${ACIS_DB_PASSWORD:?Define ACIS_DB_PASSWORD en .env}
+    volumes:
+      - ordenes:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U postgres -d ordenes"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  postgres-cuentas:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: cuentas
+      POSTGRES_PASSWORD: ${ACIS_ACCOUNTS_PASSWORD:?Define ACIS_ACCOUNTS_PASSWORD en .env}
+    volumes:
+      - cuentas:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U postgres -d cuentas"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  cuentas:
+    image: acis-entrega-cuentas
+    build:
+      context: .
+      args: { SERVICE: cuentas }
+    depends_on:
+      postgres-cuentas: { condition: service_healthy }
+    environment:
+      ACIS_BIND: 0.0.0.0
+      ACIS_ACCOUNTS_DB: jdbc:postgresql://postgres-cuentas:5432/cuentas
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${ACIS_ACCOUNTS_PASSWORD}
+      ACIS_ADMIN_EMAIL: ${ACIS_ADMIN_EMAIL:?Define ACIS_ADMIN_EMAIL en .env}
+      ACIS_ADMIN_PASSWORD: ${ACIS_ADMIN_PASSWORD:?Define ACIS_ADMIN_PASSWORD en .env}
+    ports: ["127.0.0.1:${ACIS_ACCOUNTS_PORT:-8081}:8081"]
+  ordenes:
+    image: acis-entrega-ordenes
+    build:
+      context: .
+      args: { SERVICE: acis-microservicio }
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      SERVER_ADDRESS: 0.0.0.0
+      ACIS_DB_URL: jdbc:postgresql://postgres:5432/ordenes
+      ACIS_DB_DRIVER: org.postgresql.Driver
+      ACIS_DB_USERNAME: postgres
+      ACIS_DB_PASSWORD: ${ACIS_DB_PASSWORD}
+      ACIS_ACCOUNTS_URL: http://cuentas:8081
+    ports: ["127.0.0.1:${ACIS_FIELD_PORT:-8080}:8080"]
+volumes:
+  ordenes:
+  cuentas:

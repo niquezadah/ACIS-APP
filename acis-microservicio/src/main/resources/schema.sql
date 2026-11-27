@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS catalog_entries (
+ id UUID PRIMARY KEY, kind VARCHAR(20) NOT NULL, name VARCHAR(140) NOT NULL,
+ address VARCHAR(255) NOT NULL, client VARCHAR(140) NOT NULL, email VARCHAR(254) NOT NULL,
+ active BOOLEAN NOT NULL, business_key VARCHAR(420) NOT NULL, UNIQUE(kind,business_key)
+);
+CREATE TABLE IF NOT EXISTS assignments (
+ order_id BIGINT PRIMARY KEY, technician UUID NOT NULL, site UUID NOT NULL,
+ revision BIGINT NOT NULL, scheduled VARCHAR(10) NOT NULL, latitude DOUBLE PRECISION, longitude DOUBLE PRECISION,
+ sla_hours INTEGER NOT NULL, created_at BIGINT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS photo_files (
+ order_id BIGINT NOT NULL REFERENCES assignments(order_id) ON DELETE CASCADE,
+ digest VARCHAR(64) NOT NULL, image BYTEA NOT NULL, PRIMARY KEY(order_id,digest)
+);
+CREATE TABLE IF NOT EXISTS order_photos (
+ order_id BIGINT NOT NULL REFERENCES assignments(order_id) ON DELETE CASCADE,
+ position_no INTEGER NOT NULL, digest VARCHAR(64) NOT NULL, PRIMARY KEY(order_id,position_no)
+);
+CREATE TABLE IF NOT EXISTS changes (
+ operation UUID PRIMARY KEY, account UUID NOT NULL, order_id BIGINT NOT NULL,
+ revision BIGINT NOT NULL, action VARCHAR(30) NOT NULL, recorded_at BIGINT NOT NULL
+);
+ALTER TABLE changes ADD COLUMN IF NOT EXISTS actor_name VARCHAR(120) NOT NULL DEFAULT '';
+CREATE TABLE IF NOT EXISTS equipment (
+ id UUID PRIMARY KEY, site UUID NOT NULL REFERENCES catalog_entries(id),
+ name VARCHAR(140) NOT NULL, location VARCHAR(180) NOT NULL, active BOOLEAN NOT NULL, UNIQUE(site,name)
+);

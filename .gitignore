@@ -11,3 +11,9 @@ __pycache__/
 
 # Instrucciones locales de herramientas de desarrollo
 /AGENTS.md
+/.env
+/firma/
+**/target/
+**/data/*.db
+*.jks
+*.keystore
