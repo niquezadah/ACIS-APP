@@ -98,6 +98,10 @@ Antes de elegir un destino, revisar el [protocolo de protección de datos](verif
 
 El proyecto utiliza Android Gradle Plugin 9.3.3, Gradle 9.5.0 y el complemento Compose 2.2.10. El archivo `local.properties` contiene la ruta del SDK de cada computador y no se comparte en el repositorio.
 
+### Cliente REST en desarrollo
+
+La aplicación incluye el cliente Retrofit y una cola SQLite de operaciones con clave `clientOrderId`, pero no sincroniza órdenes automáticamente ni invoca la cola desde la interfaz o el ViewModel. Las órdenes que ya existían antes de la migración conservan su ID y contenido local y no se encolan para envío. Para apuntar el cliente a un microservicio de desarrollo, define `ACIS_API_BASE_URL` como propiedad local de Gradle (por ejemplo, en `%USERPROFILE%\.gradle\gradle.properties`), con una URL que termine en `/`. No guardes la IP o dominio de tu red local en este repositorio. En un dispositivo físico usa la dirección LAN del computador que ejecuta el servidor; `localhost` apunta al propio dispositivo. El tráfico HTTP sin TLS se permite solo en la variante `debug`; para otros entornos configura HTTPS. La API solo intercambia el conteo de evidencias, nunca las rutas o los archivos de fotos.
+
 Para comprobar los recursos nativos, el dispositivo debe disponer de una aplicación de cámara y servicios de ubicación. En el emulador se puede configurar una ubicación simulada.
 
 Desde la terminal de Windows, en la raíz del proyecto:
