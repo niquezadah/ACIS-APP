@@ -11,6 +11,9 @@ enum class Stage(val label: String) {
 
 data class Order(
  val id: Long = 0,
+ val siteId: String? = null,
+ val technicianId: String? = null,
+ val siteClient: String = "",
  val site: String = "",
  val address: String = "",
  val equipment: String = "",

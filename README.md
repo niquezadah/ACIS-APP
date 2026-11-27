@@ -11,7 +11,8 @@ Nuestra aplicación permite organizar y registrar visitas de mantención de equi
 
 ## Funcionalidades
 
-- Creación de órdenes con local, dirección, equipo, técnico asignado, prioridad, tipo de mantención y motivo.
+- Gestión de técnicos y locales desde Jefatura: registro, edición y desactivación.
+- Creación de órdenes con selección de local y técnico activos, dirección automática, equipo, prioridad, tipo de mantención y motivo.
 - Eliminación de órdenes desde Jefatura, con confirmación previa.
 - Búsqueda de órdenes por local, equipo, técnico o número; filtros de pendientes y cerradas. Las abiertas se ordenan por prioridad (Urgente, Alta y Normal) y las cerradas quedan al final. A igual prioridad aparecen primero las más nuevas.
 - Aceptación de órdenes y registro de llegada y salida.
@@ -32,7 +33,7 @@ Los botones y campos de texto tienen esquinas de 6 dp. Cámara, galería y ubica
 
 ## Cómo usar la aplicación
 
-1. Seleccionar **Jefatura** y crear una orden con los datos de la visita.
+1. Seleccionar **Jefatura** y registrar los técnicos y locales desde sus respectivas opciones. Luego crear una orden eligiendo los registros activos; la dirección se completa desde el local.
 2. Seleccionar **Técnico**, abrir la orden, aceptarla y registrar la llegada.
 3. Ingresar el diagnóstico y el trabajo realizado. Los materiales son opcionales.
 4. Agregar entre 1 y 10 fotografías desde la cámara o con **Elegir del teléfono**. Se pueden revisar deslizando hacia los lados y quitar antes de guardar. Si está disponible, registrar la ubicación. Se puede guardar un avance y continuar después. Al salir de la intervención con Volver o Atrás, el avance se guarda automáticamente antes de regresar; si falla, el formulario permanece abierto.
@@ -121,7 +122,7 @@ La revisión local del 11/11/2026 registra 27 pruebas unitarias aprobadas, compi
 
 ## Alcance de esta versión
 
-Esta primera entrega funciona de forma local. Todavía no incluye servidor, cuentas de usuario, sincronización entre dispositivos, pronóstico meteorológico, catálogos independientes de clientes y equipos ni cálculo de plazos de atención (SLA). Los datos del local y del equipo se registran dentro de cada orden.
+Esta primera entrega funciona de forma local. Todavía no incluye servidor, cuentas de usuario, sincronización entre dispositivos, pronóstico meteorológico, catálogos independientes de clientes y equipos ni cálculo de plazos de atención (SLA). Los técnicos y locales tienen registros propios; el equipo se describe dentro de cada orden. El cliente o empresa se registra como un dato del local, sin un catálogo de clientes independiente.
 
 Estas funcionalidades quedan pendientes para la evolución del proyecto. Guardar información sin conexión no implica sincronizarla con otros teléfonos.
 
@@ -134,3 +135,20 @@ Estas funcionalidades quedan pendientes para la evolución del proyecto. Guardar
 ## Eliminar una orden
 
 Desde Jefatura, abrir el detalle y tocar Eliminar orden. Se solicita confirmación antes de borrar. Cancelar conserva el registro. Al confirmar se elimina la orden local y, si la lectura está completa, se intenta retirar sus copias privadas de fotografías que no estén referenciadas por otras órdenes; las imágenes originales elegidas desde la galería no se modifican. La eliminación es permanente en este dispositivo. La validación del perfil también se realiza en el ViewModel; los perfiles siguen siendo de demostración.
+
+
+## Técnicos y locales
+
+Jefatura puede registrar, buscar y editar técnicos y locales. Los técnicos requieren nombre y correo válido; el correo no se puede repetir. Los locales requieren nombre, cliente o empresa y dirección; no se puede repetir la combinación de nombre y dirección. Los valores se guardan sin espacios en los extremos y los correos en minúsculas.
+
+El interruptor **Registro activo** permite desactivar o reactivar un registro. Los inactivos se consultan con el filtro **Todos** y no se ofrecen en nuevas órdenes. No se borran registros de estos catálogos ni se modifican órdenes anteriores al editarlos.
+
+La nueva orden utiliza selectores de registros activos, identificados por UUID. Al elegir un local se muestran su dirección y cliente. Si no hay registros, el formulario ofrece acceso a su administración. Antes de crear la orden se consulta nuevamente el catálogo; la persistencia comprueba la selección dentro de una transacción para rechazar registros desactivados o modificados durante la creación.
+
+Cada nueva orden guarda `siteId` y `technicianId` junto con la copia histórica del nombre del local, dirección, cliente y nombre del técnico. Las órdenes antiguas mantienen sus textos y se leen con identificadores nulos; no se deducen relaciones por coincidencia de nombres.
+
+`CatalogRepository` define el acceso a los registros; `LocalCatalogRepository` implementa SQLite y `CatalogViewModel` administra carga, validación y guardado. Las pantallas no consultan la base directamente. El repositorio puede sustituirse al incorporar servicios remotos. Los registros de técnicos todavía no son cuentas de usuario.
+
+La versión 2 de SQLite agrega las tablas `technicians` y `sites` conservando la tabla `orders` y su contenido. Las migraciones futuras deben conservar también estos catálogos. Esta actualización no requiere reinstalar ni borrar datos.
+
+La verificación de esta ampliación se documenta en [Técnicos y locales](verification/revision_2026-11-27/VERIFICACION.md).

@@ -4,6 +4,7 @@ import cl.acis.app.data.EvidenceStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.acis.app.data.OrderRepository
+import cl.acis.app.data.CatalogRepository
 import cl.acis.app.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -26,7 +27,7 @@ data class UiState(
  val emptyDatabase: Boolean
   get() = completeOrderList && orders.isEmpty()
 }
-class AcisViewModel(private val repository: OrderRepository, private val evidenceStore: EvidenceStore): ViewModel() {
+class AcisViewModel(private val repository: OrderRepository, private val evidenceStore: EvidenceStore, private val catalogRepository: CatalogRepository? = null): ViewModel() {
  private var draftSession = 0
  private val mutable = MutableStateFlow(UiState())
  val state = mutable.asStateFlow()
@@ -111,10 +112,29 @@ class AcisViewModel(private val repository: OrderRepository, private val evidenc
   }
  }
  fun saveNew(done: (Long)->Unit) {
-  val o=state.value.draft; val errors=Rules.creation(o)
-  if(o.id!=0L || o.stage!=Stage.ASSIGNED) return
-  mutable.value=state.value.copy(errors=errors)
-  if(errors.isEmpty()) persist(o,done)
+  if(state.value.role!="Jefatura") {notify("Solo Jefatura puede crear una orden.");return}
+  if(state.value.busy) return
+  val draft=state.value.draft
+  if(draft.id!=0L || draft.stage!=Stage.ASSIGNED) return
+  mutable.value=state.value.copy(busy=true)
+  viewModelScope.launch {
+   try {
+    val catalog=checkNotNull(catalogRepository).read()
+    val selection=CatalogRules.selection(draft,catalog)
+    if(selection.isNotEmpty()) {mutable.value=state.value.copy(errors=selection);return@launch}
+    val order=CatalogRules.snapshot(draft,catalog)
+    val errors=Rules.creation(order)
+    mutable.value=state.value.copy(errors=errors)
+    if(errors.isNotEmpty()) return@launch
+    val id=repository.save(order)
+    val saved=order.copy(id=id)
+    mutable.value=state.value.copy(orders=listOf(saved)+state.value.orders,draft=saved,errors=emptyMap())
+    notify("Guardado en este teléfono")
+    done(id)
+   } catch(e:kotlinx.coroutines.CancellationException) {throw e}
+   catch(e:Exception) {notify("No se pudo crear la orden. Revisa los registros y vuelve a intentarlo.")}
+   finally {mutable.value=state.value.copy(busy=false)}
+  }
  }
  private var leavingVisit=false
  fun saveVisitBeforeLeaving(orderId:Long,done:()->Unit) {

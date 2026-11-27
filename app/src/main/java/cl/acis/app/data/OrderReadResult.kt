@@ -37,6 +37,9 @@ private fun decodeOrder(id: Long, payload: String): Order {
     }
     return Order(
         id = id,
+        siteId = json.optString("siteId").takeIf { it.isNotBlank() && it != "null" },
+        technicianId = json.optString("technicianId").takeIf { it.isNotBlank() && it != "null" },
+        siteClient = json.optString("siteClient", ""),
         site = json.getString("site"),
         address = json.getString("address"),
         equipment = json.getString("equipment"),

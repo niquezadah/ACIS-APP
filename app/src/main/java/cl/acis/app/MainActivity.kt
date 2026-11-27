@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.acis.app.ui.AcisApp
 import cl.acis.app.ui.theme.AppTheme
 import cl.acis.app.viewmodel.AcisViewModel
+import cl.acis.app.viewmodel.CatalogViewModel
 class MainActivity: ComponentActivity() {
  private var currentVm: AcisViewModel? = null
  override fun onSaveInstanceState(outState: Bundle) {
@@ -17,10 +18,14 @@ class MainActivity: ComponentActivity() {
  override fun onCreate(savedInstanceState: Bundle?) {super.onCreate(savedInstanceState)
  val repo=(application as AcisApplication).repository
  setContent { AppTheme { val vm:AcisViewModel=viewModel(factory=object:ViewModelProvider.Factory {
- @Suppress("UNCHECKED_CAST") override fun <T:ViewModel> create(modelClass:Class<T>):T = AcisViewModel(repo,(application as AcisApplication).evidenceStore).also { model ->
+ @Suppress("UNCHECKED_CAST") override fun <T:ViewModel> create(modelClass:Class<T>):T = AcisViewModel(repo,(application as AcisApplication).evidenceStore,(application as AcisApplication).catalogRepository).also { model ->
  (savedInstanceState?.getSerializable("draft") as? cl.acis.app.model.Order)?.let(model::edit)
  savedInstanceState?.getString("role")?.let(model::role)
  } as T
- });currentVm=vm;AcisApp(vm) } }
+ });currentVm=vm
+ val catalogVm:CatalogViewModel=viewModel(factory=object:ViewModelProvider.Factory {
+ @Suppress("UNCHECKED_CAST") override fun <T:ViewModel> create(modelClass:Class<T>):T = CatalogViewModel((application as AcisApplication).catalogRepository) {vm.state.value.role} as T
+ })
+ AcisApp(vm,catalogVm) } }
  }
 }

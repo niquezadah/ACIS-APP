@@ -63,19 +63,23 @@ import java.util.Locale
  }
 }
 
-private val ControlShape=RoundedCornerShape(6.dp)
+internal val ControlShape=RoundedCornerShape(6.dp)
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun AcisApp(vm: AcisViewModel) {
+@Composable fun AcisApp(vm: AcisViewModel, catalogVm: CatalogViewModel) {
  val s by vm.state.collectAsStateWithLifecycle()
+ val catalogState by catalogVm.state.collectAsStateWithLifecycle()
  val nav=rememberNavController()
  val entry by nav.currentBackStackEntryAsState()
  val route=entry?.destination?.route ?: "orders"
  val keyboardVisible=WindowInsets.ime.getBottom(LocalDensity.current)>0
  fun goBack() {
+  if(route.startsWith("catalog/") && catalogState.busy) return
+  if(route=="new" && s.busy) return
   val visitId=if(route=="visit/{id}") entry?.arguments?.getString("id")?.toLongOrNull() else null
   if(visitId!=null) vm.saveVisitBeforeLeaving(visitId) {nav.popBackStack()} else nav.popBackStack()
  }
  val snackbar=remember { SnackbarHostState() }
+ LaunchedEffect(catalogState.message) { catalogState.message?.let { snackbar.showSnackbar(it);catalogVm.dismissMessage() } }
  LaunchedEffect(s.message) { s.message?.let { snackbar.showSnackbar(it);vm.notify(null) } }
  Scaffold(topBar={ TopAppBar(
  title={ Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -101,8 +105,16 @@ private val ControlShape=RoundedCornerShape(6.dp)
   popEnterTransition={slideInHorizontally(tween(160,easing=FastOutSlowInEasing)) {-it}},
   popExitTransition={slideOutHorizontally(tween(160,easing=FastOutSlowInEasing)) {it}}
  ) {
- composable("orders") { val current by vm.state.collectAsStateWithLifecycle(); OrderList(current,vm,onOpen={nav.navigate("detail/$it")},onNew={vm.edit(Order());nav.navigate("new")}) }
- composable("new") { val current by vm.state.collectAsStateWithLifecycle(); OrderForm(current,vm) { id -> nav.navigate("detail/$id") { popUpTo("orders") } } }
+ composable("orders") { val current by vm.state.collectAsStateWithLifecycle(); OrderList(current,vm,onOpen={nav.navigate("detail/$it")},onNew={vm.edit(Order());nav.navigate("new")},onCatalog={nav.navigate("catalog/$it")}) }
+ composable("new") { val current by vm.state.collectAsStateWithLifecycle(); OrderForm(current,vm,catalogState,catalogVm,onManage={nav.navigate("catalog/$it")}) { id -> nav.navigate("detail/$id") { popUpTo("orders") } } }
+ composable("catalog/{kind}") { back ->
+  if(s.role=="Jefatura") CatalogList(back.arguments?.getString("kind")=="technicians",catalogState,catalogVm) { id -> nav.navigate("catalog/"+back.arguments?.getString("kind")+"/$id") }
+  else Text("Solo Jefatura puede administrar estos registros",Modifier.padding(20.dp))
+ }
+ composable("catalog/{kind}/{recordId}") { back ->
+  if(s.role=="Jefatura") CatalogForm(back.arguments?.getString("kind")=="technicians",back.arguments?.getString("recordId") ?: "new",catalogState,catalogVm) {nav.popBackStack()}
+  else Text("Solo Jefatura puede administrar estos registros",Modifier.padding(20.dp))
+ }
  composable("detail/{id}") { back ->
  val current by vm.state.collectAsStateWithLifecycle()
  val order=current.orders.find { it.id==back.arguments?.getString("id")?.toLongOrNull() }
@@ -123,7 +135,7 @@ private val ControlShape=RoundedCornerShape(6.dp)
  }
  }
 }
-@Composable private fun Page(title: String, subtitle: String, content: @Composable ColumnScope.()->Unit) {
+@Composable internal fun Page(title: String, subtitle: String, content: @Composable ColumnScope.()->Unit) {
  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
  Text(title,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
  Text(subtitle,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -155,7 +167,7 @@ private val ControlShape=RoundedCornerShape(6.dp)
  }
 }
 @OptIn(ExperimentalFoundationApi::class)
-@Composable private fun Field(label: String,value: String,error: String?=null,multiline: Boolean=false,onChange:(String)->Unit) {
+@Composable internal fun Field(label: String,value: String,error: String?=null,multiline: Boolean=false,enabled: Boolean=true,onChange:(String)->Unit) {
  val requester=remember { BringIntoViewRequester() }
  var focused by remember { mutableStateOf(false) }
  val imeBottom=WindowInsets.ime.getBottom(LocalDensity.current)
@@ -165,9 +177,9 @@ private val ControlShape=RoundedCornerShape(6.dp)
    requester.bringIntoView()
   }
  }
- OutlinedTextField(value=value,onValueChange=onChange,label={Text(label)},isError=error!=null,trailingIcon={if(error!=null) Icon(androidx.compose.ui.res.painterResource(android.R.drawable.ic_dialog_alert),contentDescription="Error",tint=MaterialTheme.colorScheme.error)},supportingText={if(error!=null) Text("! $error")},singleLine=!multiline,minLines=if(multiline) 3 else 1,modifier=Modifier.fillMaxWidth().bringIntoViewRequester(requester).onFocusChanged {focused=it.isFocused},shape=ControlShape)
+ OutlinedTextField(value=value,onValueChange=onChange,enabled=enabled,label={Text(label)},isError=error!=null,trailingIcon={if(error!=null) Icon(androidx.compose.ui.res.painterResource(android.R.drawable.ic_dialog_alert),contentDescription="Error",tint=MaterialTheme.colorScheme.error)},supportingText={if(error!=null) Text("! $error")},singleLine=!multiline,minLines=if(multiline) 3 else 1,modifier=Modifier.fillMaxWidth().bringIntoViewRequester(requester).onFocusChanged {focused=it.isFocused},shape=ControlShape)
 }
-@Composable private fun Choice(label:String,options:List<String>,selected:String,onChange:(String)->Unit) {
+@Composable internal fun Choice(label:String,options:List<String>,selected:String,onChange:(String)->Unit) {
  Column {
   Text(label,style=MaterialTheme.typography.labelLarge)
   Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -187,7 +199,7 @@ private val ControlShape=RoundedCornerShape(6.dp)
   }
  }
 }
-@Composable private fun OrderList(s: UiState,vm:AcisViewModel,onOpen:(Long)->Unit,onNew:()->Unit) {
+@Composable private fun OrderList(s: UiState,vm:AcisViewModel,onOpen:(Long)->Unit,onNew:()->Unit,onCatalog:(String)->Unit) {
  var query by rememberSaveable { mutableStateOf("") }
  var filter by rememberSaveable { mutableStateOf("Todas") }
  val visible=ordersByPriority(s.orders).filter { (filter=="Todas" || if(filter=="Cerradas") it.stage==Stage.CLOSED else it.stage!=Stage.CLOSED) && (it.site+it.equipment+it.technician+it.id).contains(query,true) }
@@ -218,23 +230,45 @@ private val ControlShape=RoundedCornerShape(6.dp)
    }
   }
  }
+ if(s.role=="Jefatura") item {
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+   OutlinedButton(onClick={onCatalog("technicians")},shape=ControlShape,modifier=Modifier.weight(1f)) {Text("Técnicos")}
+   OutlinedButton(onClick={onCatalog("sites")},shape=ControlShape,modifier=Modifier.weight(1f)) {Text("Locales")}
+  }
+ }
  item { if(s.role=="Jefatura") Button(shape=ControlShape,onClick=onNew,modifier=Modifier.fillMaxWidth()) { Text("+ Crear orden") } }
  item { Field("Buscar órdenes",query,onChange={query=it});Choice("Mostrar",listOf("Todas","Pendientes","Cerradas"),filter) {filter=it} }
  if(visible.isEmpty() && s.completeOrderList) item { Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLow)) { Column(Modifier.fillMaxWidth().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) { Text(if(s.emptyDatabase) "Comencemos con la primera visita" else "No encontramos órdenes",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(if(s.emptyDatabase) "En el perfil Jefatura puedes crear una orden para un local y asignar un técnico." else "Prueba otra búsqueda o cambia el filtro.");TextButton(shape=ControlShape,onClick=vm::retry,enabled=!s.busy) {Text("Actualizar")} } } }
  items(visible,key={it.id}) { o -> Card(onClick={onOpen(o.id)},colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLow),modifier=Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) { Text("OT · ${o.id.toString().padStart(4,'0')}",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Badge(o.stage.label) };Text(o.site,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold);Text(o.equipment);Text(o.address,style=MaterialTheme.typography.bodySmall);HorizontalDivider();Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {Text(o.priority,color=priorityColor(o.priority),style=MaterialTheme.typography.labelLarge);Text("· ${o.technician}",style=MaterialTheme.typography.labelLarge)} } } }
  }
 }
-@Composable private fun OrderForm(s:UiState,vm:AcisViewModel,done:(Long)->Unit) {
+@Composable private fun OrderForm(s:UiState,vm:AcisViewModel,c:CatalogState,catalogVm:CatalogViewModel,onManage:(String)->Unit,done:(Long)->Unit) {
  val o=s.draft
- Page("Nueva orden","Completa los datos de la visita. Todos los campos de texto son obligatorios.") {
- Field("Local",o.site,s.errors["site"]) {vm.change(o.copy(site=it))}
- Field("Dirección",o.address,s.errors["address"]) {vm.change(o.copy(address=it))}
+ if(s.role!="Jefatura") {Text("Solo Jefatura puede crear órdenes",Modifier.padding(20.dp));return}
+ val sites=c.catalog.sites.filter {it.active}
+ val technicians=c.catalog.technicians.filter {it.active}
+ Page("Nueva orden","Selecciona un local y un técnico registrados para esta visita.") {
+ if(c.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+ c.readError?.let {CatalogReadError(it,catalogVm::refresh)}
+ CatalogSelector("Local",o.siteId,sites.find {it.id==o.siteId}?.name ?: o.site,
+  sites.map {it.id to "${it.name} · ${it.address}"},s.errors["site"],c.loaded && c.readError==null && !c.busy && !s.busy) {id ->
+   sites.find {it.id==id}?.let {vm.change(o.copy(siteId=it.id,site=it.name,address=it.address,siteClient=it.client))}
+ }
+ if(c.loaded && sites.isEmpty()) Text("Registra un local activo para crear una orden.")
+ TextButton(onClick={onManage("sites")},shape=ControlShape,enabled=!s.busy) {Text("Administrar locales")}
+ val selectedSite=sites.find {it.id==o.siteId}
+ if(selectedSite!=null) {Info("Dirección",selectedSite.address);Info("Cliente o empresa",selectedSite.client)}
  Field("Equipo / identificación",o.equipment,s.errors["equipment"]) {vm.change(o.copy(equipment=it))}
- Field("Técnico asignado",o.technician,s.errors["technician"]) {vm.change(o.copy(technician=it))}
+ CatalogSelector("Técnico asignado",o.technicianId,technicians.find {it.id==o.technicianId}?.name ?: o.technician,
+  technicians.map {it.id to "${it.name} · ${it.email}"},s.errors["technician"],c.loaded && c.readError==null && !c.busy && !s.busy) {id ->
+   technicians.find {it.id==id}?.let {vm.change(o.copy(technicianId=it.id,technician=it.name))}
+ }
+ if(c.loaded && technicians.isEmpty()) Text("Registra un técnico activo para crear una orden.")
+ TextButton(onClick={onManage("technicians")},shape=ControlShape,enabled=!s.busy) {Text("Administrar técnicos")}
  Choice("Prioridad",listOf("Normal","Alta","Urgente"),o.priority) {vm.change(o.copy(priority=it))}
  Choice("Tipo de mantención",listOf("Preventiva","Correctiva"),o.type) {vm.change(o.copy(type=it))}
  Field("Motivo de la visita",o.problem,s.errors["problem"],true) {vm.change(o.copy(problem=it))}
- Button(shape=ControlShape,onClick={vm.saveNew(done)},enabled=!s.busy,modifier=Modifier.fillMaxWidth()) {Text("Crear orden")}
+ Button(shape=ControlShape,onClick={vm.saveNew(done)},enabled=!s.busy && !c.busy && c.loaded && c.readError==null && sites.isNotEmpty() && technicians.isNotEmpty(),modifier=Modifier.fillMaxWidth()) {Text("Crear orden")}
  }
 }
 private fun time(value:Long)=if(value==0L) "Sin registrar" else SimpleDateFormat("dd/MM/yyyy · HH:mm",Locale.forLanguageTag("es-CL")).format(Date(value))
