@@ -1,7 +1,21 @@
 import java.util.Properties
+import java.net.URI
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 plugins { id("com.android.application"); id("org.jetbrains.kotlin.plugin.compose") }
 val acisApiBaseUrl = providers.gradleProperty("ACIS_API_BASE_URL").orElse("").get()
+val cloudAccounts = providers.gradleProperty("ACIS_ACCOUNTS_URL").orNull
+val cloudOrders = providers.gradleProperty("ACIS_FIELD_URL").orNull
+require((cloudAccounts == null) == (cloudOrders == null)) {
+ "Configura las dos direcciones del servidor o usa la configuración local."
+}
+listOfNotNull(cloudAccounts, cloudOrders).forEach { url ->
+ val parsed = URI(url)
+ require(parsed.scheme == "https" && parsed.host != null && parsed.rawUserInfo == null &&
+  parsed.rawPath == "/" && parsed.rawQuery == null && parsed.rawFragment == null) {
+  "Cada dirección de servidor debe usar HTTPS y terminar en /."
+ }
+}
+val cloud = cloudAccounts != null
 val signing = Properties().apply {
  val file = rootProject.file("firma/privada.properties")
  if(file.isFile) file.inputStream().use {load(it)}
@@ -10,10 +24,12 @@ android {
  namespace = "cl.acis.app"
  compileSdk { version = release(37) }
  defaultConfig {
-  applicationId = "cl.acis.app"; minSdk = 26; targetSdk = 37; versionCode = 2; versionName = "1.0.0"
+  applicationId = "cl.acis.app"; minSdk = 26; targetSdk = 37
+  versionCode = if (cloud) 3 else 2
+  versionName = if (cloud) "1.0.1" else "1.0.0"
   testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-  buildConfigField("String", "FIELD_URL", "\""+providers.gradleProperty("ACIS_FIELD_URL").orElse("http://127.0.0.1:8080/").get()+"\"")
-  buildConfigField("String", "ACCOUNTS_URL", "\""+providers.gradleProperty("ACIS_ACCOUNTS_URL").orElse("http://127.0.0.1:8081/").get()+"\"")
+  buildConfigField("String", "FIELD_URL", "\""+(cloudOrders ?: "http://127.0.0.1:8080/")+"\"")
+  buildConfigField("String", "ACCOUNTS_URL", "\""+(cloudAccounts ?: "http://127.0.0.1:8081/")+"\"")
   buildConfigField("String", "ACIS_API_BASE_URL", "\"${acisApiBaseUrl}\"")
  }
  compileOptions { sourceCompatibility = JavaVersion.VERSION_11; targetCompatibility = JavaVersion.VERSION_11 }

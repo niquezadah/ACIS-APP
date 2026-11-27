@@ -2,18 +2,21 @@ package cl.acis.app.connected
 
 import android.content.Context
 import androidx.work.*
+import cl.acis.app.BuildConfig
 import com.google.gson.Gson
 import java.io.IOException
 import retrofit2.HttpException
 
 object Sessions {
     private var current:FieldStore?=null
+    private val prefsName = if (BuildConfig.ACCOUNTS_URL.startsWith("https://"))
+        "access-"+java.net.URI(BuildConfig.ACCOUNTS_URL).host else "access"
     fun load(ctx:Context):Session? {
-        val raw=ctx.getSharedPreferences("access",Context.MODE_PRIVATE).getString("session",null) ?: return null
+        val raw=ctx.getSharedPreferences(prefsName,Context.MODE_PRIVATE).getString("session",null) ?: return null
         return Gson().fromJson(raw,Session::class.java).takeIf {it.expires>System.currentTimeMillis()}
     }
     fun save(ctx:Context,s:Session?) {
-        ctx.getSharedPreferences("access",Context.MODE_PRIVATE).edit().putString("session",s?.let {Gson().toJson(it)}).commit()
+        ctx.getSharedPreferences(prefsName,Context.MODE_PRIVATE).edit().putString("session",s?.let {Gson().toJson(it)}).commit()
     }
     @Synchronized fun store(ctx:Context,s:Session):FieldStore {
         return current?.takeIf {it.session==s} ?: FieldStore(ctx.applicationContext,s,Network(s.token)).also { current=it }

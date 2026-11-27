@@ -37,6 +37,8 @@ def call(base, path, method="GET", data=None, token=None, expected=200):
         return None
 
 def run(accounts, field, password):
+    call(accounts, "/health")
+    call(field, "/health")
     def credentials(email):
         return {"email":email+"@example.invalid","password":password,"name":email+" prueba"}
     def login(email):

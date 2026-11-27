@@ -2,7 +2,9 @@
 
 Aplicación Android para coordinar mantenciones de climatización y refrigeración. Jefatura programa la visita, el técnico registra el trabajo y el cliente confirma el resultado. Proyecto DSY1105 de **NICOLÁS QUEZADA** y **CLAUDIO CÓRDOVA**.
 
-[Descargar el APK firmado](entrega/ACIS-en-Terreno.apk)
+[Descargar el APK firmado para la demostración local](entrega/ACIS-en-Terreno.apk)
+
+Para probar ACIS desde el celular con Wi-Fi o datos móviles, seguir la [guía de despliegue en Render y Supabase](entrega/RENDER-SUPABASE.md). Después del despliegue se genera un APK firmado con las direcciones de los dos servicios.
 
 ## Poner en marcha la demostración
 

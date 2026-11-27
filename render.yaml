@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: acis-cuentas
+    runtime: docker
+    plan: free
+    branch: codex/tecnicos-y-locales
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: SERVICE
+        value: cuentas
+      - key: ACIS_BIND
+        value: 0.0.0.0
+      - key: ACIS_ACCOUNTS_DB
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: ACIS_ADMIN_EMAIL
+        sync: false
+      - key: ACIS_ADMIN_PASSWORD
+        sync: false
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "3"
+      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+        value: "0"
+
+  - type: web
+    name: acis-ordenes
+    runtime: docker
+    plan: free
+    branch: codex/tecnicos-y-locales
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: SERVICE
+        value: acis-microservicio
+      - key: SERVER_ADDRESS
+        value: 0.0.0.0
+      - key: ACIS_DB_DRIVER
+        value: org.postgresql.Driver
+      - key: ACIS_DB_URL
+        sync: false
+      - key: ACIS_DB_USERNAME
+        sync: false
+      - key: ACIS_DB_PASSWORD
+        sync: false
+      - key: ACIS_ACCOUNTS_URL
+        sync: false
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "3"
+      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+        value: "0"
