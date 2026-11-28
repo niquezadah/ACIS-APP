@@ -4,6 +4,3 @@
 !*/pom.xml
 !*/src/
 !*/src/**
-!deployment/
-!deployment/DatabaseTlsProbe.java
-!deployment/start.sh

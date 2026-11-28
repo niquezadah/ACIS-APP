@@ -12,7 +12,7 @@ services:
         value: cuentas
       - key: ACIS_BIND
         value: 0.0.0.0
-      - key: ACIS_DB_DIAGNOSTICS
+      - key: ACIS_CLOUD_DATABASE
         value: "true"
       - key: ACIS_ACCOUNTS_DB
         sync: false
@@ -24,10 +24,6 @@ services:
         sync: false
       - key: ACIS_ADMIN_PASSWORD
         sync: false
-      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
-        value: "3"
-      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
-        value: "0"
 
   - type: web
     name: acis-ordenes
@@ -42,6 +38,8 @@ services:
         value: acis-microservicio
       - key: SERVER_ADDRESS
         value: 0.0.0.0
+      - key: ACIS_CLOUD_DATABASE
+        value: "true"
       - key: ACIS_DB_DRIVER
         value: org.postgresql.Driver
       - key: ACIS_DB_URL
@@ -52,7 +50,3 @@ services:
         sync: false
       - key: ACIS_ACCOUNTS_URL
         sync: false
-      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
-        value: "3"
-      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
-        value: "0"
