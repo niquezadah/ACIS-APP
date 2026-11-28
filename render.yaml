@@ -12,6 +12,8 @@ services:
         value: cuentas
       - key: ACIS_BIND
         value: 0.0.0.0
+      - key: ACIS_DB_DIAGNOSTICS
+        value: "true"
       - key: ACIS_ACCOUNTS_DB
         sync: false
       - key: SPRING_DATASOURCE_USERNAME
