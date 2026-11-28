@@ -6,7 +6,8 @@ RUN mvn -q dependency:go-offline
 COPY ${SERVICE}/src ./src
 RUN mvn -q -DskipTests package
 COPY deployment/DatabaseTlsProbe.java /build/DatabaseTlsProbe.java
-RUN javac -d /build/probe /build/DatabaseTlsProbe.java
+RUN javac -d /build/probe /build/DatabaseTlsProbe.java \
+    && mvn -q dependency:copy-dependencies -DincludeArtifactIds=postgresql -DoutputDirectory=/build/probe
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
